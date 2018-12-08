@@ -160,19 +160,12 @@
                 <version>${spotify-docker.version}</version>
                 <configuration>
                     <dockerDirectory>${project.basedir}</dockerDirectory>
-                    <serverId>docker-hub</serverId>
                     <imageName>${docker.image.prefix}/${project.name}</imageName>
                     <imageTags>
                         <imageTag>${project.version}</imageTag>
                         <imageTag>latest</imageTag>
                     </imageTags>
-                    <resources>
-                        <resource>
-                            <targetPath>/</targetPath>
-                            <directory>${project.build.directory}</directory>
-                            <include>${project.build.finalName}.jar</include>
-                        </resource>
-                    </resources>
+                    <serverId>docker-hub</serverId>
                 </configuration>
             </plugin>
 
