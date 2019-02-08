@@ -201,26 +201,17 @@
                 </configuration>
             </plugin>
 
-            <!-- integration tests (with mocking and code coverage agents enabled) -->
+            <!-- integration tests -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-failsafe-plugin</artifactId>
                 <version>${failsafe.version}</version>
                 <configuration>
-                    <!-- JaCoCo must be enabled also on target app container
-                         for tests running there, e.g. UI tests and API tests -->
-                    <argLine>${jmockit.agentConfig} ${jacoco.itAgentConfig}</argLine>
+                    <!-- JaCoCo must be enabled on target app container to gather coverage
+                         for integration tests, e.g. UI tests and API tests -->
                     <includes>
                         <include>**/*IntegrationTest.java</include>
                     </includes>
-                    <properties>
-                        <!-- add SonarQube's JaCoCo listener to enable -->
-                        <!-- gathering of code coverage metrics per test -->
-                        <property>
-                            <name>listener</name>
-                            <value>org.sonar.java.jacoco.JUnitListener</value>
-                        </property>
-                    </properties>
                 </configuration>
                 <!-- if activated, will run failsafe automatically on integration-test and verify goals -->
                 <!--<executions>
