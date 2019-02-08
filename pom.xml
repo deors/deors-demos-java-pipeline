@@ -1,26 +1,27 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	     xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
                              http://maven.apache.org/xsd/maven-4.0.0.xsd">
-	<modelVersion>4.0.0</modelVersion>
- 	<groupId>deors.demos</groupId>
-	<artifactId>deors-demos-java-pipeline</artifactId>
-	<version>1.0-SNAPSHOT</version>
-	<packaging>jar</packaging>
 
-	<name>deors-demos-java-pipeline</name>
-	<description>An exemplar Java + Maven + Spring Boot project with Jenkins pipeline using
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>deors.demos</groupId>
+    <artifactId>deors-demos-java-pipeline</artifactId>
+    <version>1.0-SNAPSHOT</version>
+    <packaging>jar</packaging>
+
+    <name>deors-demos-java-pipeline</name>
+    <description>An exemplar Java + Maven + Spring Boot project with Jenkins pipeline using
                  Maven lifecycle and Docker for packaging and running integration tests</description>
 
     <parent>
-		<groupId>org.springframework.boot</groupId>
-		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>2.1.2.RELEASE</version>
-		<relativePath/> <!-- lookup parent from repository -->
-	</parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>2.1.2.RELEASE</version>
+        <relativePath/> <!-- lookup parent from repository -->
+    </parent>
 
-	<properties>
+    <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
         <java.version>11</java.version>
@@ -52,22 +53,22 @@
 
         <spotify-docker.version>1.2.0</spotify-docker.version>
         <docker.image.prefix>deors</docker.image.prefix>
-	</properties>
+    </properties>
 
-	<dependencies>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-actuator</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-web</artifactId>
-		</dependency>
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
 
-		<dependency>
-			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-test</artifactId>
-			<scope>test</scope>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
             <!-- exclude JUnit 4 in favour of JUnit 5 -->
             <exclusions>
                 <exclusion>
@@ -75,7 +76,7 @@
                     <artifactId>junit</artifactId>
                 </exclusion>
             </exclusions>
-		</dependency>
+        </dependency>
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter-api</artifactId>
@@ -119,16 +120,16 @@
             <version>${sonarjava.version}</version>
             <scope>test</scope>
         </dependency>
-	</dependencies>
+    </dependencies>
 
-	<build>
+    <build>
         <finalName>${project.artifactId}</finalName>
 
-		<plugins>
-			<plugin>
-				<groupId>org.springframework.boot</groupId>
-				<artifactId>spring-boot-maven-plugin</artifactId>
-			</plugin>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
 
             <!-- copy JaCoCo dependencies to include them in the Docker image
                  and to collect code coverage metrics during integration tests -->
@@ -295,7 +296,7 @@
                     <failBuildOnCVSS>5</failBuildOnCVSS>
                 </configuration>
             </plugin>
-		</plugins>
-	</build>
+        </plugins>
+    </build>
 
 </project>
