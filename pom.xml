@@ -26,19 +26,18 @@
         <java.version>11</java.version>
 
         <junit.version>5.3.2</junit.version>
-        <junit-platform.version>1.3.2</junit-platform.version>
-        <jmockit.version>1.43</jmockit.version>
-        <jacoco.version>0.8.2</jacoco.version>
-        <sonarjava.version>5.9.2.16552</sonarjava.version>
-        <selenium.version>3.13.0</selenium.version>
-        <htmlunit.version>2.29.0</htmlunit.version>
-        <pitest.version>1.4.3</pitest.version>
-        <pitest-junit5.version>0.7</pitest-junit5.version>
-        <jmeter.version>2.6.0</jmeter.version>
+        <jmockit.version>1.45</jmockit.version>
+        <jacoco.version>0.8.3</jacoco.version>
+        <sonarjava.version>5.10.2.17019</sonarjava.version>
+        <selenium.version>3.141.59</selenium.version>
+        <selenium-htmlunit.version>2.33.3</selenium-htmlunit.version>
+        <pitest.version>1.4.5</pitest.version>
+        <pitest-junit5.version>0.8</pitest-junit5.version>
+        <jmeter.version>2.8.5</jmeter.version>
         <dependency-check.version>3.3.2</dependency-check.version>
 
         <jmockit.path>${settings.localRepository}/org/jmockit/jmockit/${jmockit.version}/jmockit-${jmockit.version}.jar</jmockit.path>
-        <jmockit.utAgentConfig>-javaagent:${jmockit.path}</jmockit.utAgentConfig>
+        <jmockit.agentConfig>-javaagent:${jmockit.path}</jmockit.agentConfig>
 
         <jacoco.path>${settings.localRepository}/org/jacoco/org.jacoco.agent/${jacoco.version}/org.jacoco.agent-${jacoco.version}-runtime.jar</jacoco.path>
         <jacoco.utReport>${project.build.directory}/jacoco.exec</jacoco.utReport>
@@ -46,12 +45,12 @@
         <jacoco.utAgentConfig>-javaagent:${jacoco.path}=destfile=${jacoco.utReport}</jacoco.utAgentConfig>
         <jacoco.itAgentConfig>-javaagent:${jacoco.path}=destfile=${jacoco.itReport}</jacoco.itAgentConfig>
 
-        <compiler.version>3.7.0</compiler.version>
+        <compiler.version>3.8.0</compiler.version>
         <surefire.version>2.22.1</surefire.version>
         <failsafe.version>2.22.1</failsafe.version>
-        <dependency.version>3.0.2</dependency.version>
+        <dependency.version>3.1.1</dependency.version>
 
-        <spotify-docker.version>1.1.1</spotify-docker.version>
+        <spotify-docker.version>1.2.0</spotify-docker.version>
         <docker.image.prefix>deors</docker.image.prefix>
 	</properties>
 
@@ -93,6 +92,18 @@
             <groupId>org.jmockit</groupId>
             <artifactId>jmockit</artifactId>
             <version>${jmockit.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.seleniumhq.selenium</groupId>
+            <artifactId>selenium-java</artifactId>
+            <version>${selenium.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.seleniumhq.selenium</groupId>
+            <artifactId>htmlunit-driver</artifactId>
+            <version>${selenium-htmlunit.version}</version>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -175,10 +186,9 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>${surefire.version}</version>
                 <configuration>
-                    <argLine>${jmockit.utAgentConfig} ${jacoco.utAgentConfig}</argLine>
+                    <argLine>${jmockit.agentConfig} ${jacoco.utAgentConfig}</argLine>
                     <excludes>
-                        <exclude>**/*ApplicationTests.java</exclude>
-                        <exclude>**/*IntegrationTestCase.java</exclude>
+                        <exclude>**/*IntegrationTest.java</exclude>
                     </excludes>
                     <properties>
                         <!-- add SonarQube's JaCoCo listener to enable -->
@@ -199,10 +209,9 @@
                 <configuration>
                     <!-- JaCoCo must be enabled also on target app container
                          for tests running there, e.g. UI tests and API tests -->
-                    <argLine>${jmockit.utAgentConfig} ${jacoco.itAgentConfig}</argLine>
+                    <argLine>${jmockit.agentConfig} ${jacoco.itAgentConfig}</argLine>
                     <includes>
-                        <include>**/*ApplicationTests.java</include>
-                        <include>**/*IntegrationTestCase.java</include>
+                        <include>**/*IntegrationTest.java</include>
                     </includes>
                     <properties>
                         <!-- add SonarQube's JaCoCo listener to enable -->
@@ -230,13 +239,14 @@
                 <artifactId>pitest-maven</artifactId>
                 <version>${pitest.version}</version>
                 <configuration>
+                    <verbose>true</verbose>
                     <jvmArgs>
-                        <value>${jmockit.utAgentConfig}</value>
+                        <value>${jmockit.agentConfig}</value>
                     </jvmArgs>
-                    <excludedTests>
+                    <excludedTestClasses>
                         <param>*ApplicationTests</param>
-                        <param>*IntegrationTestCase</param>
-                    </excludedTests>
+                        <param>*IntegrationTest</param>
+                    </excludedTestClasses>
                     <outputFormats>
                         <outputFormat>XML</outputFormat>
                     </outputFormats>
