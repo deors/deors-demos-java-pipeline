@@ -239,7 +239,6 @@
                 <artifactId>pitest-maven</artifactId>
                 <version>${pitest.version}</version>
                 <configuration>
-                    <verbose>true</verbose>
                     <jvmArgs>
                         <value>${jmockit.agentConfig}</value>
                     </jvmArgs>
