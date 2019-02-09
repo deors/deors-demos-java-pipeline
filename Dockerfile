@@ -1,4 +1,4 @@
-FROM openjdk:11.0.1
+FROM adoptopenjdk/openjdk11:jdk-11.0.2.9
 VOLUME /tmp
 ADD target/dependency/jacocoagent.jar jacocoagent.jar
 ADD target/deors-demos-java-pipeline.jar app.jar
