@@ -208,7 +208,7 @@ public class HelloServiceIntegrationTest {
         logger.info("testHello");
         WebElement body = (new WebDriverWait(driver, 10)).until(
             d -> {
-                driver.get(baseUrl + "hello");
+                d.get(baseUrl + "hello");
                 return d.findElement(By.xpath("/html/body"));
             });
 
