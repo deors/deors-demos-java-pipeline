@@ -12,6 +12,7 @@ pipeline {
         ORG_NAME = "deors"
         APP_NAME = "deors-demos-java-pipeline"
         APP_CONTEXT_ROOT = "/"
+        APP_LISTENING_PORT = "8080"
         TEST_CONTAINER_NAME = "ci-${APP_NAME}-${BUILD_NUMBER}"
         DOCKER_HUB = credentials("${ORG_NAME}-docker-hub")
     }
@@ -65,7 +66,7 @@ pipeline {
         stage('Integration tests') {
             steps {
                 echo "-=- execute integration tests -=-"
-                sh "mvn failsafe:integration-test failsafe:verify -DargLine=\"-Dtest.selenium.hub.url=http://selenium-hub:4444/wd/hub -Dtest.target.server.url=http://${TEST_CONTAINER_NAME}:8080/${APP_CONTEXT_ROOT}\""
+                sh "mvn failsafe:integration-test failsafe:verify -DargLine=\"-Dtest.selenium.hub.url=http://selenium-hub:4444/wd/hub -Dtest.target.server.url=http://${TEST_CONTAINER_NAME}:${APP_LISTENING_PORT}/${APP_CONTEXT_ROOT}\""
                 sh "java -jar target/dependency/jacococli.jar dump --address ${TEST_CONTAINER_NAME} --port 6300 --destfile target/jacoco-it.exec"
                 junit 'target/failsafe-reports/*.xml'
                 jacoco execPattern: 'target/jacoco-it.exec'
@@ -75,7 +76,7 @@ pipeline {
         stage('Performance tests') {
             steps {
                 echo "-=- execute performance tests -=-"
-                sh "mvn jmeter:jmeter jmeter:results -Djmeter.target.host=${TEST_CONTAINER_NAME} -Djmeter.target.port=8080 -Djmeter.target.root=${APP_CONTEXT_ROOT}"
+                sh "mvn jmeter:jmeter jmeter:results -Djmeter.target.host=${TEST_CONTAINER_NAME} -Djmeter.target.port=${APP_LISTENING_PORT} -Djmeter.target.root=${APP_CONTEXT_ROOT}"
                 perfReport sourceDataFiles: 'target/jmeter/results/*.csv', errorUnstableThreshold: 0, errorFailedThreshold: 5, errorUnstableResponseTimeThreshold: 'default.jtl:100'
             }
         }
