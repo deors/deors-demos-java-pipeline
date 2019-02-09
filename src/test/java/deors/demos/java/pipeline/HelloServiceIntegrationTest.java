@@ -205,7 +205,6 @@ public class HelloServiceIntegrationTest {
 
     private void testHello(WebDriver driver, String baseUrl) {
 
-        logger.info("testHello");
         WebElement body = (new WebDriverWait(driver, 10)).until(
             d -> {
                 d.get(baseUrl + "hello");
