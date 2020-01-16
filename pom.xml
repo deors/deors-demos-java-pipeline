@@ -30,8 +30,8 @@
         <jmockit.version>1.45</jmockit.version>
         <selenium.version>3.141.59</selenium.version>
         <selenium-htmlunit.version>2.36.0</selenium-htmlunit.version>
-        <pitest.version>1.4.5</pitest.version>
-        <pitest-junit5.version>0.8</pitest-junit5.version>
+        <pitest.version>1.4.11</pitest.version>
+        <pitest-junit5.version>0.11</pitest-junit5.version>
         <jmeter.version>2.9.0</jmeter.version>
         <dependency-check.version>5.2.4</dependency-check.version>
 
