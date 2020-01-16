@@ -27,7 +27,7 @@
         <java.version>11</java.version>
 
         <junit.version>5.5.2</junit.version>
-        <jmockit.version>1.45</jmockit.version>
+        <jmockit.version>1.49</jmockit.version>
         <selenium.version>3.141.59</selenium.version>
         <selenium-htmlunit.version>2.36.0</selenium-htmlunit.version>
         <pitest.version>1.4.11</pitest.version>
