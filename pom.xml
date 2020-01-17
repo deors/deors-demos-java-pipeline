@@ -47,7 +47,7 @@
 
         <sonarjava.version>5.14.0.18788</sonarjava.version>
 
-        <compiler.version>3.8.0</compiler.version>
+        <compiler.version>3.8.1</compiler.version>
         <surefire.version>2.22.2</surefire.version>
         <failsafe.version>2.22.2</failsafe.version>
         <dependency.version>3.1.1</dependency.version>
