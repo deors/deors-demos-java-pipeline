@@ -32,7 +32,8 @@
         <selenium-htmlunit.version>2.36.0</selenium-htmlunit.version>
         <pitest.version>1.4.11</pitest.version>
         <pitest-junit5.version>0.11</pitest-junit5.version>
-        <jmeter.version>2.9.0</jmeter.version>
+        <jmeter-plugin.version>3.0.0</jmeter-plugin.version>
+        <jmeter.version>5.2.1</jmeter.version>
         <dependency-check.version>5.2.4</dependency-check.version>
 
         <jmockit.path>${settings.localRepository}/org/jmockit/jmockit/${jmockit.version}/jmockit-${jmockit.version}.jar</jmockit.path>
@@ -54,6 +55,11 @@
 
         <spotify-docker.version>1.2.2</spotify-docker.version>
         <docker.image.prefix>deors</docker.image.prefix>
+
+        <!-- test properties -->
+        <jmeter.target.host>localhost</jmeter.target.host>
+        <jmeter.target.port>8080</jmeter.target.port>
+        <jmeter.target.root>/</jmeter.target.root>
     </properties>
 
     <dependencies>
@@ -215,7 +221,7 @@
                         <include>**/*IntegrationTest.java</include>
                     </includes>
                 </configuration>
-                <!-- if activated, will run failsafe automatically on integration-test and verify goals -->
+                <!-- if activated, failsafe will run automatically on integration-test and verify goals -->
                 <!--<executions>
                     <execution>
                         <goals>
@@ -251,7 +257,7 @@
                         <version>${pitest-junit5.version}</version>
                     </dependency>
                 </dependencies>
-                <!-- if activated, will run pitest automatically on integration-test goal -->
+                <!-- if activated, pitest will run automatically on integration-test goal -->
                 <!--<executions>
                     <execution>
                         <goals>
@@ -265,7 +271,7 @@
             <plugin>
                 <groupId>com.lazerycode.jmeter</groupId>
                 <artifactId>jmeter-maven-plugin</artifactId>
-                <version>${jmeter.version}</version>
+                <version>${jmeter-plugin.version}</version>
                 <configuration>
                     <testResultsTimestamp>false</testResultsTimestamp>
                     <propertiesUser>
@@ -274,16 +280,23 @@
                         <root>${jmeter.target.root}</root>
                     </propertiesUser>
                 </configuration>
-                <!-- if activated, will run jmeter automatically on integration-test and verify goals -->
-                <!-- <executions>
+                <executions>
                     <execution>
+                        <id>configuration</id>
+                        <goals>
+                            <goal>configure</goal>
+                        </goals>
+                    </execution>
+                <!-- if activated, jmeter will run automatically on integration-test and verify goals -->
+                <!--    <execution>
                         <phase>integration-test</phase>
                         <goals>
+                            <goal>configure</goal>
                             <goal>jmeter</goal>
                             <goal>results</goal>
                         </goals>
-                    </execution>
-                </executions> -->
+                    </execution>-->
+                </executions>
             </plugin>
 
             <!-- dependency vulnerability tests -->
