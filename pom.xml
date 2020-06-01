@@ -31,7 +31,7 @@
         <jacoco.version>0.8.5</jacoco.version>
         <selenium.version>3.141.59</selenium.version>
         <selenium-htmlunit.version>2.36.0</selenium-htmlunit.version>
-        <pitest.version>1.4.11</pitest.version>
+        <pitest.version>1.5.2</pitest.version>
         <pitest-junit5.version>0.11</pitest-junit5.version>
         <jmeter-plugin.version>3.0.0</jmeter-plugin.version>
         <jmeter.version>5.2.1</jmeter.version>
