@@ -1,0 +1,30 @@
+performance:
+  throughput:
+    error:
+      unstable: 0
+      failed: 5
+    response:
+      unstable: 'default.jtl:100'
+
+security:
+  static:
+    high:
+      unstable: 0
+      failed: 0
+    medium:
+      unstable: 0
+      failed: 5
+  dynamic:
+    high:
+      unstable: 0
+      failed: 0
+    medium:
+      unstable: 0
+      failed: 5
+  dependencies:
+    high:
+      unstable: 2
+      failed: 2
+    medium:
+      unstable: 5
+      failed: 5
