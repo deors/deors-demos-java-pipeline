@@ -131,13 +131,7 @@ pipeline {
                     sh './mvnw sonar:sonar'
                 }
                 timeout(time: 10, unit: 'MINUTES') {
-                    //waitForQualityGate abortPipeline: true
-                    script {
-                        String qg = waitForQualityGate()
-                        if (qg.status != 'OK' && qg.status != 'WARN') {
-                            error "Pipeline aborted due to quality gate failure: ${qg.status}"
-                        }
-                    }
+                    waitForQualityGate abortPipeline: true
                 }
             }
         }
