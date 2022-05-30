@@ -9,11 +9,11 @@ performance:
 security:
   static:
     high:
-      unstable: 0
-      failed: 0
+      unstable: '0'
+      failed: '0'
     medium:
-      unstable: 0
-      failed: 5
+      unstable: '0'
+      failed: '5'
   dynamic:
     high:
       unstable: 0

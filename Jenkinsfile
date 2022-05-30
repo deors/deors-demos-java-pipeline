@@ -116,7 +116,6 @@ pipeline {
             steps {
                 echo '-=- run dependency vulnerability tests -=-'
                 sh './mvnw dependency-check:check'
-                echo "qg"
                 echo qualityGates.security.dependencies.high.failed
                 dependencyCheckPublisher(
                     failedTotalHigh: qualityGates.security.dependencies.high.failed,
