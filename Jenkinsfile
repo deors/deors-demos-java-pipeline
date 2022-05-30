@@ -141,10 +141,12 @@ pipeline {
                 echo '-=- push Docker image -=-'
                 withDockerRegistry([ credentialsId: "${ORG_NAME}-docker-hub", url: "" ]) {
                     sh "docker push ${ORG_NAME}/${APP_NAME}:${APP_VERSION}"
-                    try {
-                        sh "docker tag ${ORG_NAME}/${APP_NAME}:${APP_VERSION} ${ORG_NAME}/${APP_NAME}:latest"
-                    } catch (Throwable t) {
-                        t.printStackTrace();
+                    step {
+                        try {
+                            sh "docker tag ${ORG_NAME}/${APP_NAME}:${APP_VERSION} ${ORG_NAME}/${APP_NAME}:latest"
+                        } catch (Throwable t) {
+                            t.printStackTrace();
+                        }
                     }
                 }
             }
