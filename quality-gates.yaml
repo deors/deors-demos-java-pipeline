@@ -22,6 +22,9 @@ security:
       unstable: 0
       failed: 5
   dependencies:
+    critical:
+      unstable: 2
+      failed: 2
     high:
       unstable: 2
       failed: 2

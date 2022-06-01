@@ -1,4 +1,4 @@
-FROM eclipse-temurin:11.0.15_10-jdk
+FROM eclipse-temurin:17.0.3_7-jdk
 VOLUME /tmp
 ADD target/dependency/jacocoagent.jar jacocoagent.jar
 ADD target/deors-demos-java-pipeline.jar app.jar

@@ -2,7 +2,7 @@
 pipeline {
     agent {
         docker {
-            image 'eclipse-temurin:11.0.15_10-jdk'
+            image 'eclipse-temurin:17.0.3_7-jdk'
             args '--network ci --mount type=volume,source=ci-maven-home,target=/root/.m2'
         }
     }
@@ -87,7 +87,7 @@ pipeline {
         stage('Performance tests') {
             steps {
                 echo '-=- execute performance tests -=-'
-                sh "./mvnw jmeter:configure jmeter:jmeter jmeter:results -Djmeter.target.host=${TEST_CONTAINER_NAME} -Djmeter.target.port=${APP_LISTENING_PORT} -Djmeter.target.root=${APP_CONTEXT_ROOT}"
+                sh "./mvnw jmeter:configure@configuration jmeter:jmeter jmeter:results -Djmeter.target.host=${TEST_CONTAINER_NAME} -Djmeter.target.port=${APP_LISTENING_PORT} -Djmeter.target.root=${APP_CONTEXT_ROOT}"
                 perfReport(
                     sourceDataFiles: 'target/jmeter/results/*.csv',
                     errorUnstableThreshold: qualityGates.performance.throughput.error.unstable,
@@ -112,15 +112,21 @@ pipeline {
             }
         }
 
-        stage('Dependency vulnerability tests') {
+        stage('Dependency vulnerability scan') {
             steps {
                 echo '-=- run dependency vulnerability tests -=-'
                 sh './mvnw dependency-check:check'
                 dependencyCheckPublisher(
+                    failedTotalCritical: qualityGates.security.dependencies.critical.failed,
+                    unstableTotalCritical: qualityGates.security.dependencies.critical.unstable,
                     failedTotalHigh: qualityGates.security.dependencies.high.failed,
                     unstableTotalHigh: qualityGates.security.dependencies.high.unstable,
                     failedTotalMedium: qualityGates.security.dependencies.medium.failed,
                     unstableTotalMedium: qualityGates.security.dependencies.medium.unstable)
+                script {
+                    if (currentBuild.result == 'FAILURE') {
+                        error('Dependency vulnerabilities exceed the configured threshold')
+                    }
             }
         }
 
