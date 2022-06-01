@@ -23,11 +23,11 @@ security:
       failed: 5
   dependencies:
     critical:
-      unstable: 2
-      failed: 2
+      unstable: 4
+      failed: 4
     high:
-      unstable: 2
-      failed: 2
+      unstable: 0
+      failed: 0
     medium:
       unstable: 5
       failed: 5
