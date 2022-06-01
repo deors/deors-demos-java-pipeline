@@ -127,6 +127,7 @@ pipeline {
                     if (currentBuild.result == 'FAILURE') {
                         error('Dependency vulnerabilities exceed the configured threshold')
                     }
+                }
             }
         }
 
