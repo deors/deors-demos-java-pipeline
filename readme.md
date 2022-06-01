@@ -6,7 +6,6 @@ This exemplar configuration includes:
 
 - Packaging as a Docker image.
 - Pipeline as code with Jenkins.
-- Docker image lifecycle with Spotify Maven plug-in.
 - Surefire configured to gather test coverage with JaCoCo.
 - Mutation tests with Pitest.
 - Integration tests with Selenium, which can be executed either manually or via Failsafe.
