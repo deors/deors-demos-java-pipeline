@@ -10,10 +10,22 @@ spec:
   containers:
   - name: jdk
     image: eclipse-temurin:18.0.2.1_1-jdk
+    command:
+      - sleep
+    args:
+      - 1d
   - name: podman
     image: mgoltzsche/podman:4.2.1-minimal
+    command:
+      - sleep
+    args:
+      - 1d
   - name: kubectl
     image: rancher/kubectl:v1.23.7
+    command:
+      - sleep
+    args:
+      - 1d
 '''
         }
     }
