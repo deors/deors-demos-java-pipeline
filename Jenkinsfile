@@ -32,7 +32,7 @@ spec:
             steps {
                 echo '-=- prepare environment -=-'
                 sh './mvnw --version'
-                sh 'sudo apt-get -y install podman'
+                sh 'apt-get -y install podman'
                 script {
                     qualityGates = readYaml file: 'quality-gates.yaml'
                 }
