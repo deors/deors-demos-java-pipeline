@@ -186,7 +186,9 @@ spec:
     post {
         always {
             echo '-=- stop test container and remove deployment -=-'
-            sh "kubectl delete pod ${TEST_CONTAINER_NAME}"
+            container('kubectl') {
+                sh "kubectl delete pod ${TEST_CONTAINER_NAME}"
+            }
         }
     }
 }
