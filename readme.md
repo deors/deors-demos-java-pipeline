@@ -19,3 +19,5 @@ This exemplar configuration includes:
 The continuous integration pipeline requires that a credential with id `deors-docker-hub`
 is configured in Jenkins. The `deors` prefix in the credential id refers to the `deors`
 org namespace which is targeted to push Docker images to Docker Hub.
+
+If you want to use your own Docker Hub organization, edit the pipeline replacing the `ORG_NAME` variable with the chosen organization name, and configure the credential in Jenkins with id `<YOUR_ORG_NAME-docker-hub>`.
