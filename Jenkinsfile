@@ -80,7 +80,7 @@ spec:
         stage('Run container image') {
             steps {
                 echo '-=- run container image -=-'
-                sh "kubectl run ${TEST_CONTAINER_NAME} --env="JAVA_OPTS='-javaagent:/jacocoagent.jar=output=tcpserver,address=*,port=6300'" --image:${ORG_NAME}/${APP_NAME}:${APP_VERSION}"
+                sh "kubectl run ${TEST_CONTAINER_NAME} --env='JAVA_OPTS=\"-javaagent:/jacocoagent.jar=output=tcpserver,address=*,port=6300\"' --image:${ORG_NAME}/${APP_NAME}:${APP_VERSION}"
             }
         }
 
