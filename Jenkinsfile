@@ -13,6 +13,16 @@ spec:
     command:
       - cat
     tty: true
+  - name: podman
+    image: mgoltzsche/podman:4.2.1-minimal
+    command:
+      - cat
+    tty: true
+  - name: kubectl
+    image: rancher/kubectl:v1.23.7
+    command:
+      - cat
+    tty: true
 '''
         }
     }
@@ -32,8 +42,12 @@ spec:
             steps {
                 echo '-=- prepare environment -=-'
                 sh './mvnw --version'
-                sh 'apt-get -y install podman'
-                sh 'apt-get -y install kubectl'
+                container('podman') {
+                    sh 'podman --version'
+                }
+                container('kubectl') {
+                    sh 'kubectl --version'
+                }
                 script {
                     qualityGates = readYaml file: 'quality-gates.yaml'
                 }
@@ -172,7 +186,7 @@ spec:
     post {
         always {
             echo '-=- stop test container and remove deployment -=-'
-            sh "kubectl delete ${TEST_CONTAINER_NAME}"
+            sh "kubectl delete pod ${TEST_CONTAINER_NAME}"
         }
     }
 }
