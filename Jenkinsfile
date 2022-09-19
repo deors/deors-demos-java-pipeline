@@ -1,9 +1,18 @@
 #!groovy
 pipeline {
     agent {
-        docker {
-            image 'eclipse-temurin:18.0.2.1_1-jdk'
-            args '--network ci --mount type=volume,source=ci-maven-home,target=/root/.m2'
+        kubernetes {
+            yaml """
+apiVersion: v1
+kind: Pod
+spec:
+  containers:
+  - name: jdk
+    image: eclipse-temurin:18.0.2.1_1-jdk
+    command:
+      - cat
+    tty: true
+"""
         }
     }
 
@@ -20,6 +29,8 @@ pipeline {
     stages {
         stage('Prepare Environment') {
             steps {
+                echo '-=- prepare environment -=-'
+                sh './mvnw --version'
                 script {
                     qualityGates = readYaml file: 'quality-gates.yaml'
                 }
@@ -29,7 +40,7 @@ pipeline {
         stage('Compile') {
             steps {
                 echo '-=- compiling project -=-'
-                sh './mvnw clean compile'
+                sh './mvnw compile'
             }
         }
 
@@ -114,7 +125,7 @@ pipeline {
 
         stage('Dependency vulnerability scan') {
             steps {
-                echo '-=- run dependency vulnerability tests -=-'
+                echo '-=- run dependency vulnerability scan -=-'
                 sh './mvnw dependency-check:check'
                 dependencyCheckPublisher(
                     failedTotalCritical: qualityGates.security.dependencies.critical.failed,
