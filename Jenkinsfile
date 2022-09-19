@@ -10,19 +10,10 @@ spec:
   containers:
   - name: jdk
     image: eclipse-temurin:18.0.2.1_1-jdk
-    command:
-      - cat
-    tty: true
   - name: podman
     image: mgoltzsche/podman:4.2.1-minimal
-    command:
-      - cat
-    tty: true
   - name: kubectl
     image: rancher/kubectl:v1.23.7
-    command:
-      - cat
-    tty: true
 '''
         }
     }
