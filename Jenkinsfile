@@ -19,7 +19,7 @@ spec:
       - cat
     tty: true
   - name: kubectl
-    image: rancher/kubectl:v1.23.7
+    image: bitnami/kubectl:v1.25.1
     command:
       - cat
     tty: true
@@ -46,7 +46,7 @@ spec:
                     sh 'podman --version'
                 }
                 container('kubectl') {
-                    sh 'kubectl --version'
+                    sh 'kubectl version'
                 }
                 script {
                     qualityGates = readYaml file: 'quality-gates.yaml'
