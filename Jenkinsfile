@@ -33,6 +33,7 @@ spec:
                 echo '-=- prepare environment -=-'
                 sh './mvnw --version'
                 sh 'apt-get -y install podman'
+                sh 'apt-get -y install kubectl'
                 script {
                     qualityGates = readYaml file: 'quality-gates.yaml'
                 }
