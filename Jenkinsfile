@@ -2,7 +2,8 @@
 pipeline {
     agent {
         kubernetes {
-            yaml """
+            defaultContainer 'jdk'
+            yaml '''
 apiVersion: v1
 kind: Pod
 spec:
@@ -12,18 +13,18 @@ spec:
     command:
       - cat
     tty: true
-"""
+'''
         }
     }
 
     environment {
-        ORG_NAME = 'deors'
+        //ORG_NAME = 'deors'
         APP_NAME = 'deors-demos-java-pipeline'
         APP_VERSION = '1.0-SNAPSHOT'
         APP_CONTEXT_ROOT = '/'
         APP_LISTENING_PORT = '8080'
         TEST_CONTAINER_NAME = "ci-${APP_NAME}-${BUILD_NUMBER}"
-        DOCKER_HUB = credentials("${ORG_NAME}-docker-hub")
+        //DOCKER_HUB = credentials("${ORG_NAME}-docker-hub")
     }
 
     stages {
@@ -31,6 +32,7 @@ spec:
             steps {
                 echo '-=- prepare environment -=-'
                 sh './mvnw --version'
+                sh 'sudo apt-get -y install podman'
                 script {
                     qualityGates = readYaml file: 'quality-gates.yaml'
                 }
@@ -68,17 +70,17 @@ spec:
             }
         }
 
-        stage('Build Docker image') {
+        stage('Build container image') {
             steps {
-                echo '-=- build Docker image -=-'
-                sh "docker build -t ${ORG_NAME}/${APP_NAME}:${APP_VERSION} -t ${ORG_NAME}/${APP_NAME}:latest ."
+                echo '-=- build container image -=-'
+                sh "podman build -t ${ORG_NAME}/${APP_NAME}:${APP_VERSION} ."
             }
         }
 
-        stage('Run Docker image') {
+        stage('Run container image') {
             steps {
-                echo '-=- run Docker image -=-'
-                sh "docker run --name ${TEST_CONTAINER_NAME} --detach --rm --network ci --expose 6300 --env JAVA_OPTS='-javaagent:/jacocoagent.jar=output=tcpserver,address=*,port=6300' ${ORG_NAME}/${APP_NAME}:latest"
+                echo '-=- run container image -=-'
+                sh "kubectl run ${TEST_CONTAINER_NAME} --env="JAVA_OPTS='-javaagent:/jacocoagent.jar=output=tcpserver,address=*,port=6300'" --image:${ORG_NAME}/${APP_NAME}:${APP_VERSION}"
             }
         }
 
@@ -95,7 +97,7 @@ spec:
             }
         }
 
-        stage('Performance tests') {
+        /*stage('Performance tests') {
             steps {
                 echo '-=- execute performance tests -=-'
                 sh "./mvnw jmeter:configure@configuration jmeter:jmeter jmeter:results -Djmeter.target.host=${TEST_CONTAINER_NAME} -Djmeter.target.port=${APP_LISTENING_PORT} -Djmeter.target.root=${APP_CONTEXT_ROOT}"
@@ -105,7 +107,7 @@ spec:
                     errorFailedThreshold: qualityGates.performance.throughput.error.failed,
                     errorUnstableResponseTimeThreshold: qualityGates.performance.throughput.response.unstable)
             }
-        }
+        }*/
 
         // stage('Web page performance analysis') {
         //     steps {
@@ -123,7 +125,7 @@ spec:
         //     }
         // }
 
-        stage('Dependency vulnerability scan') {
+        /*stage('Dependency vulnerability scan') {
             steps {
                 echo '-=- run dependency vulnerability scan -=-'
                 sh './mvnw dependency-check:check'
@@ -140,9 +142,9 @@ spec:
                     }
                 }
             }
-        }
+        }*/
 
-        stage('Code inspection & quality gate') {
+        /*stage('Code inspection & quality gate') {
             steps {
                 echo '-=- run code inspection & check quality gate -=-'
                 withSonarQubeEnv('ci-sonarqube') {
@@ -152,24 +154,24 @@ spec:
                     waitForQualityGate abortPipeline: true
                 }
             }
-        }
+        }*/
 
-        stage('Push Docker image') {
+        /*stage('Push Docker image') {
             steps {
                 echo '-=- push Docker image -=-'
-                withDockerRegistry([ credentialsId: "${ORG_NAME}-docker-hub", url: "" ]) {
+                withDockerRegistry([ credentialsId: "${ORG_NAME}-docker-hub", url: '' ]) {
                     sh "docker tag ${ORG_NAME}/${APP_NAME}:${APP_VERSION} ${ORG_NAME}/${APP_NAME}:latest"
                     sh "docker push ${ORG_NAME}/${APP_NAME}:${APP_VERSION}"
                     sh "docker push ${ORG_NAME}/${APP_NAME}:latest"
                 }
             }
-        }
+        }*/
     }
 
     post {
         always {
-            echo '-=- remove deployment -=-'
-            sh "docker stop ${TEST_CONTAINER_NAME}"
+            echo '-=- stop test container and remove deployment -=-'
+            sh "kubectl delete ${TEST_CONTAINER_NAME}"
         }
     }
 }
