@@ -9,17 +9,17 @@ kind: Pod
 spec:
   containers:
   - name: jdk
-    image: eclipse-temurin:18.0.2.1_1-jdk
+    image: docker.io/eclipse-temurin:18.0.2.1_1-jdk
     command:
       - cat
     tty: true
   - name: podman
-    image: mgoltzsche/podman:4.2.1-minimal
+    image: quay.io/containers/podman:v4.2.0
     command:
       - cat
     tty: true
   - name: kubectl
-    image: bitnami/kubectl:1.25.1
+    image: docker.io/bitnami/kubectl:1.25.1
     command:
       - cat
     tty: true
