@@ -7,34 +7,39 @@ pipeline {
 apiVersion: v1
 kind: Pod
 spec:
+  securityContext:
+    runAsUser: 1001
   containers:
   - name: jdk
     image: docker.io/eclipse-temurin:18.0.2.1_1-jdk
     command:
-      - cat
-    tty: true
+      - sleep
+    args:
+      - infinity
   - name: podman
     image: quay.io/containers/podman:v4.2.0
     command:
-      - cat
-    tty: true
-  - name: kubectl
-    image: docker.io/bitnami/kubectl:1.25.1
+      - sleep
+    args:
+      - infinity
+  - name: aks
+    image: acrdvpsplatformdev.azurecr.io/devops-platform-image:v0.0.5
     command:
-      - cat
-    tty: true
+      - sleep
+    args:
+      - infinity
+  imagePullSecrets:
+  - name: master-acr-credentials
 '''
         }
     }
 
     environment {
-        //ORG_NAME = 'deors'
         APP_NAME = 'deors-demos-java-pipeline'
         APP_VERSION = '1.0-SNAPSHOT'
         APP_CONTEXT_ROOT = '/'
         APP_LISTENING_PORT = '8080'
         TEST_CONTAINER_NAME = "ci-${APP_NAME}-${BUILD_NUMBER}"
-        //DOCKER_HUB = credentials("${ORG_NAME}-docker-hub")
     }
 
     stages {
@@ -45,8 +50,24 @@ spec:
                 container('podman') {
                     sh 'podman --version'
                 }
-                container('kubectl') {
-                    sh 'kubectl version'
+                container('aks') {
+                    withCredentials([
+                        usernamePassword(
+                            credentialsId: 'sp-terraform-credentials',
+                            usernameVariable: 'AAD_SERVICE_PRINCIPAL_CLIENT_ID',
+                            passwordVariable: 'AAD_SERVICE_PRINCIPAL_CLIENT_SECRET'),
+                        usernamePassword(
+                            string(credentialsId: 'aks-tenant', variable: 'AKS_TENANT')),
+                        usernamePassword(
+                            string(credentialsId: 'aks-resource-group', variable: 'AKS_RESOURCE_GROUP')),
+                        usernamePassword(
+                            string(credentialsId: 'aks-name', variable: 'AKS_NAME'))
+                    ]) {
+                        sh "az login --service-principal --username ${AAD_SERVICE_PRINCIPAL_CLIENT_ID} --password ${AAD_SERVICE_PRINCIPAL_CLIENT_SECRET} --tenant ${AKS_TENANT}"
+                        sh "az aks get-credentials --resource-group ${AKS_RESOURCE_GROUP} --name ${AKS_NAME}"
+                        sh 'kubelogin convert-kubeconfig -l spn'
+                        sh 'kubectl version'
+                    }
                 }
                 script {
                     qualityGates = readYaml file: 'quality-gates.yaml'
