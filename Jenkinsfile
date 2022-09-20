@@ -52,14 +52,13 @@ spec:
                 }
                 container('aks') {
                     withCredentials([
-                        usernamePassword(
-                            credentialsId: 'sp-terraform-credentials',
-                            usernameVariable: 'AAD_SERVICE_PRINCIPAL_CLIENT_ID',
-                            passwordVariable: 'AAD_SERVICE_PRINCIPAL_CLIENT_SECRET'),
-                        string(credentialsId: 'aks-tenant', variable: 'AKS_TENANT'),
-                        string(credentialsId: 'aks-resource-group', variable: 'AKS_RESOURCE_GROUP'),
-                        string(credentialsId: 'aks-name', variable: 'AKS_NAME')
-                    ]) {
+                            usernamePassword(
+                                credentialsId: 'sp-terraform-credentials',
+                                usernameVariable: 'AAD_SERVICE_PRINCIPAL_CLIENT_ID',
+                                passwordVariable: 'AAD_SERVICE_PRINCIPAL_CLIENT_SECRET'),
+                            string(credentialsId: 'aks-tenant', variable: 'AKS_TENANT'),
+                            string(credentialsId: 'aks-resource-group', variable: 'AKS_RESOURCE_GROUP'),
+                            string(credentialsId: 'aks-name', variable: 'AKS_NAME')]) {
                         sh "az login --service-principal --username ${AAD_SERVICE_PRINCIPAL_CLIENT_ID} --password ${AAD_SERVICE_PRINCIPAL_CLIENT_SECRET} --tenant ${AKS_TENANT}"
                         sh "az aks get-credentials --resource-group ${AKS_RESOURCE_GROUP} --name ${AKS_NAME}"
                         sh 'kubelogin convert-kubeconfig -l spn'
@@ -106,14 +105,24 @@ spec:
         stage('Build container image') {
             steps {
                 echo '-=- build container image -=-'
-                sh "podman build -t ${ORG_NAME}/${APP_NAME}:${APP_VERSION} ."
+                container('podman') {
+                    sh "podman build -t ${ORG_NAME}/${APP_NAME}:${APP_VERSION} ."
+                }
             }
         }
 
         stage('Run container image') {
             steps {
                 echo '-=- run container image -=-'
-                sh "kubectl run ${TEST_CONTAINER_NAME} --env='JAVA_OPTS=\"-javaagent:/jacocoagent.jar=output=tcpserver,address=*,port=6300\"' --image:${ORG_NAME}/${APP_NAME}:${APP_VERSION}"
+                container('aks') {
+                    withCredentials([
+                            usernamePassword(
+                                credentialsId: 'sp-terraform-credentials',
+                                usernameVariable: 'AAD_SERVICE_PRINCIPAL_CLIENT_ID',
+                                passwordVariable: 'AAD_SERVICE_PRINCIPAL_CLIENT_SECRET')]) {
+                        sh "kubectl run ${TEST_CONTAINER_NAME} --env='JAVA_OPTS=\"-javaagent:/jacocoagent.jar=output=tcpserver,address=*,port=6300\"' --image:${ORG_NAME}/${APP_NAME}:${APP_VERSION}"
+                    }
+                }
             }
         }
 
@@ -205,7 +214,13 @@ spec:
         always {
             echo '-=- stop test container and remove deployment -=-'
             container('aks') {
-                sh "kubectl delete pod ${TEST_CONTAINER_NAME}"
+                withCredentials([
+                        usernamePassword(
+                            credentialsId: 'sp-terraform-credentials',
+                            usernameVariable: 'AAD_SERVICE_PRINCIPAL_CLIENT_ID',
+                            passwordVariable: 'AAD_SERVICE_PRINCIPAL_CLIENT_SECRET')]) {
+                    sh "kubectl delete pod ${TEST_CONTAINER_NAME}"
+                }
             }
         }
     }
