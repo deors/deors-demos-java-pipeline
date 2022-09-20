@@ -39,6 +39,7 @@ spec:
         APP_VERSION = '1.0-SNAPSHOT'
         APP_CONTEXT_ROOT = '/'
         APP_LISTENING_PORT = '8080'
+        APP_CONTAINER_IMAGE_PREFIX = 'deors'
         TEST_CONTAINER_NAME = "ci-${APP_NAME}-${BUILD_NUMBER}"
     }
 
@@ -106,7 +107,7 @@ spec:
             steps {
                 echo '-=- build container image -=-'
                 container('podman') {
-                    sh "podman build -t ${ORG_NAME}/${APP_NAME}:${APP_VERSION} ."
+                    sh "podman build -t ${APP_CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION} ."
                 }
             }
         }
@@ -120,7 +121,7 @@ spec:
                                 credentialsId: 'sp-terraform-credentials',
                                 usernameVariable: 'AAD_SERVICE_PRINCIPAL_CLIENT_ID',
                                 passwordVariable: 'AAD_SERVICE_PRINCIPAL_CLIENT_SECRET')]) {
-                        sh "kubectl run ${TEST_CONTAINER_NAME} --env='JAVA_OPTS=\"-javaagent:/jacocoagent.jar=output=tcpserver,address=*,port=6300\"' --image:${ORG_NAME}/${APP_NAME}:${APP_VERSION}"
+                        sh "kubectl run ${TEST_CONTAINER_NAME} --env='JAVA_OPTS=\"-javaagent:/jacocoagent.jar=output=tcpserver,address=*,port=6300\"' --image:${APP_CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION}"
                     }
                 }
             }
