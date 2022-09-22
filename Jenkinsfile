@@ -124,7 +124,7 @@ spec:
                                 credentialsId: 'sp-terraform-credentials',
                                 usernameVariable: 'AAD_SERVICE_PRINCIPAL_CLIENT_ID',
                                 passwordVariable: 'AAD_SERVICE_PRINCIPAL_CLIENT_SECRET')]) {
-                        sh "kubectl run ${TEST_CONTAINER_NAME} --env='JAVA_OPTS=\"-javaagent:/jacocoagent.jar=output=tcpserver,address=*,port=6300\"' --image:${APP_CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION}"
+                        sh "kubectl run ${TEST_CONTAINER_NAME} --image=${APP_CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION} --env='JAVA_OPTS=\"-javaagent:/jacocoagent.jar=output=tcpserver,address=*,port=6300\"' --port=${APP_LISTENING_PORT}"
                     }
                 }
             }
