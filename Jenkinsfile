@@ -127,7 +127,7 @@ spec:
                                 credentialsId: 'sp-terraform-credentials',
                                 usernameVariable: 'AAD_SERVICE_PRINCIPAL_CLIENT_ID',
                                 passwordVariable: 'AAD_SERVICE_PRINCIPAL_CLIENT_SECRET')]) {
-                        sh "kubectl run ${TEST_CONTAINER_NAME} --image=${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION} --env='JAVA_OPTS=\"-javaagent:/jacocoagent.jar=output=tcpserver,address=*,port=${APP_JACOCO_PORT}\"' --port=${APP_LISTENING_PORT}"
+                        sh "kubectl run ${TEST_CONTAINER_NAME} --image=${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION} --env=JAVA_OPTS=-javaagent:/jacocoagent.jar=output=tcpserver,address=*,port=${APP_JACOCO_PORT} --port=${APP_LISTENING_PORT}"
                         sh "kubectl expose pod ${TEST_CONTAINER_NAME} --port=${APP_LISTENING_PORT}"
                         sh "kubectl expose pod ${TEST_CONTAINER_NAME} --port=${APP_JACOCO_PORT} --name=${TEST_CONTAINER_NAME}-jacoco"
                         sh "sleep 999999"
