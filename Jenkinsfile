@@ -138,7 +138,8 @@ spec:
         stage('Integration tests') {
             steps {
                 echo '-=- execute integration tests -=-'
-                sh "curl --retry 25 --retry-connrefused --connect-timeout 5 --max-time 5 http://${TEST_CONTAINER_NAME}:${APP_LISTENING_PORT}/${APP_CONTEXT_ROOT}/actuator/health"
+                CONTEXT_ROOT = (APP_CONTEXT_ROOT == '/' || APP_CONTEXT_ROOT == '') ? '' : APP_CONTEXT_ROOT + '/'
+                sh "curl --retry 10 --retry-connrefused --connect-timeout 5 --max-time 5 http://${TEST_CONTAINER_NAME}:${APP_LISTENING_PORT}/${CONTEXT_ROOT}actuator/health"
                 sh "./mvnw failsafe:integration-test failsafe:verify -DargLine=\"-Dtest.selenium.hub.url=http://${SELENIUM_HUB_HOST}:${SELENIUM_HUB_PORT}/wd/hub -Dtest.target.server.url=http://${TEST_CONTAINER_NAME}:${APP_LISTENING_PORT}/${APP_CONTEXT_ROOT}\""
                 sh "java -jar target/dependency/jacococli.jar dump --address ${TEST_CONTAINER_NAME}-jacoco --port ${APP_JACOCO_PORT} --destfile target/jacoco-it.exec"
                 sh 'mkdir target/site/jacoco-it'
