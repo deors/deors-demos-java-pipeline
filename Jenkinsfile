@@ -41,7 +41,10 @@ spec:
         APP_NAME = 'deors-demos-java-pipeline'
         APP_VERSION = '1.0-SNAPSHOT'
         APP_CONTEXT_ROOT = '/'
-        URL_CONTEXT_ROOT = (APP_CONTEXT_ROOT == '/' || APP_CONTEXT_ROOT == '') ? '' : APP_CONTEXT_ROOT + '/'
+        URL_CONTEXT_ROOT = ''
+        if (APP_CONTEXT_ROOT != '/' && APP_CONTEXT_ROOT != '') {
+            URL_CONTEXT_ROOT = APP_CONTEXT_ROOT + '/';
+        }
         APP_LISTENING_PORT = '8080'
         APP_JACOCO_PORT = '6300'
         CONTAINER_IMAGE_PREFIX = 'deors'
