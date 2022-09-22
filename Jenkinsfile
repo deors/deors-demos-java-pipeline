@@ -41,10 +41,6 @@ spec:
         APP_NAME = 'deors-demos-java-pipeline'
         APP_VERSION = '1.0-SNAPSHOT'
         APP_CONTEXT_ROOT = '/'
-        URL_CONTEXT_ROOT = ''
-        if (APP_CONTEXT_ROOT != '/' && APP_CONTEXT_ROOT != '') {
-            URL_CONTEXT_ROOT = APP_CONTEXT_ROOT + '/';
-        }
         APP_LISTENING_PORT = '8080'
         APP_JACOCO_PORT = '6300'
         CONTAINER_IMAGE_PREFIX = 'deors'
@@ -142,7 +138,7 @@ spec:
         stage('Integration tests') {
             steps {
                 echo '-=- execute integration tests -=-'
-                sh "curl --retry 10 --retry-connrefused --connect-timeout 5 --max-time 5 http://${TEST_CONTAINER_NAME}:${APP_LISTENING_PORT}/${URL_CONTEXT_ROOT}actuator/health"
+                sh "curl --retry 10 --retry-connrefused --connect-timeout 5 --max-time 5 http://${TEST_CONTAINER_NAME}:${APP_LISTENING_PORT}/${URL_CONTEXT_ROOT}actuator/health".replace('//', '/')
                 sh "./mvnw failsafe:integration-test failsafe:verify -DargLine=-Dtest.selenium.hub.url=http://${SELENIUM_HUB_HOST}:${SELENIUM_HUB_PORT}/wd/hub -Dtest.target.server.url=http://${TEST_CONTAINER_NAME}:${APP_LISTENING_PORT}/${URL_CONTEXT_ROOT}"
                 sh "java -jar target/dependency/jacococli.jar dump --address ${TEST_CONTAINER_NAME}-jacoco --port ${APP_JACOCO_PORT} --destfile target/jacoco-it.exec"
                 sh 'mkdir target/site/jacoco-it'
