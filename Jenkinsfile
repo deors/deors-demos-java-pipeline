@@ -42,8 +42,11 @@ spec:
         APP_VERSION = '1.0-SNAPSHOT'
         APP_CONTEXT_ROOT = '/'
         APP_LISTENING_PORT = '8080'
-        APP_CONTAINER_IMAGE_PREFIX = 'deors'
+        APP_JACOCO_PORT = '6300'
+        CONTAINER_IMAGE_PREFIX = 'deors'
         TEST_CONTAINER_NAME = "ci-${APP_NAME}-${BUILD_NUMBER}"
+        SELENIUM_HUB_HOST = 'selenium-hub'
+        SELENIUM_HUB_PORT = '4444'
     }
 
     stages {
@@ -110,7 +113,7 @@ spec:
             steps {
                 echo '-=- build container image -=-'
                 container('podman') {
-                    sh "podman build -t ${APP_CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION} ."
+                    sh "podman build -t ${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION} ."
                 }
             }
         }
@@ -124,7 +127,9 @@ spec:
                                 credentialsId: 'sp-terraform-credentials',
                                 usernameVariable: 'AAD_SERVICE_PRINCIPAL_CLIENT_ID',
                                 passwordVariable: 'AAD_SERVICE_PRINCIPAL_CLIENT_SECRET')]) {
-                        sh "kubectl run ${TEST_CONTAINER_NAME} --image=${APP_CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION} --env='JAVA_OPTS=\"-javaagent:/jacocoagent.jar=output=tcpserver,address=*,port=6300\"' --port=${APP_LISTENING_PORT}"
+                        sh "kubectl run ${TEST_CONTAINER_NAME} --image=${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION} --env='JAVA_OPTS=\"-javaagent:/jacocoagent.jar=output=tcpserver,address=*,port=${APP_JACOCO_PORT}\"' --port=${APP_LISTENING_PORT}"
+                        sh "kubectl expose ${TEST_CONTAINER_NAME} --port=${APP_LISTENING_PORT}"
+                        sh "kubectl expose ${TEST_CONTAINER_NAME} --port=${APP_JACOCO_PORT} --name=${TEST_CONTAINER_NAME}-jacoco"
                     }
                 }
             }
@@ -134,8 +139,8 @@ spec:
             steps {
                 echo '-=- execute integration tests -=-'
                 sh "curl --retry 5 --retry-connrefused --connect-timeout 5 --max-time 5 http://${TEST_CONTAINER_NAME}:${APP_LISTENING_PORT}/${APP_CONTEXT_ROOT}/actuator/health"
-                sh "./mvnw failsafe:integration-test failsafe:verify -DargLine=\"-Dtest.selenium.hub.url=http://selenium-hub:4444/wd/hub -Dtest.target.server.url=http://${TEST_CONTAINER_NAME}:${APP_LISTENING_PORT}/${APP_CONTEXT_ROOT}\""
-                sh "java -jar target/dependency/jacococli.jar dump --address ${TEST_CONTAINER_NAME} --port 6300 --destfile target/jacoco-it.exec"
+                sh "./mvnw failsafe:integration-test failsafe:verify -DargLine=\"-Dtest.selenium.hub.url=http://${SELENIUM_HUB_HOST}:${SELENIUM_HUB_PORT}/wd/hub -Dtest.target.server.url=http://${TEST_CONTAINER_NAME}:${APP_LISTENING_PORT}/${APP_CONTEXT_ROOT}\""
+                sh "java -jar target/dependency/jacococli.jar dump --address ${TEST_CONTAINER_NAME}-jacoco --port ${APP_JACOCO_PORT} --destfile target/jacoco-it.exec"
                 sh 'mkdir target/site/jacoco-it'
                 sh 'java -jar target/dependency/jacococli.jar report target/jacoco-it.exec --classfiles target/classes --xml target/site/jacoco-it/jacoco.xml'
                 junit 'target/failsafe-reports/*.xml'
