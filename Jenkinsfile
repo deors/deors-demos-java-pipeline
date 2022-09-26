@@ -41,7 +41,6 @@ spec:
         APP_NAME = 'deors-demos-java-pipeline'
         APP_VERSION = '1.0-SNAPSHOT'
         APP_CONTEXT_ROOT = '/'
-        APP_CONTEXT_ROOT_IN_URL = ''
         APP_LISTENING_PORT = '8080'
         APP_JACOCO_PORT = '6300'
         CONTAINER_IMAGE_PREFIX = 'deors'
@@ -231,6 +230,8 @@ spec:
                             usernameVariable: 'AAD_SERVICE_PRINCIPAL_CLIENT_ID',
                             passwordVariable: 'AAD_SERVICE_PRINCIPAL_CLIENT_SECRET')]) {
                     sh "kubectl delete pod ${TEST_CONTAINER_NAME}"
+                    sh "kubectl delete service ${TEST_CONTAINER_NAME}"
+                    sh "kubectl delete service ${TEST_CONTAINER_NAME}-jacoco"
                 }
             }
         }
