@@ -72,7 +72,7 @@ spec:
                 container('aks') {
                     sh "az login --service-principal --username $AAD_SERVICE_PRINCIPAL_USR --password $AAD_SERVICE_PRINCIPAL_PSW --tenant $AKS_TENANT"
                     sh "az aks get-credentials --resource-group $AKS_RESOURCE_GROUP --name $AKS_NAME"
-                    sh 'kubelogin convert-kubeconfig -l spn'
+                    sh "kubelogin convert-kubeconfig -l spn --client-id $AAD_SERVICE_PRINCIPAL_USR --client-secret $AAD_SERVICE_PRINCIPAL_PSW"
                     sh 'kubectl version'
                     script {
                         ACR_TOKEN = sh(script: "az acr login -n $ACR_NAME --expose-token --output tsv --query accessToken",
