@@ -55,7 +55,7 @@ spec:
         AKS_NAME = credentials('aks-name')
         ACR_NAME = credentials('acr-name')
         ACR_URL = "${ACR_NAME}.azurecr.io"
-        ACR_TOKEN = 'undefined' // obtained dynamically in prep env stage
+        ACR_PULL_CREDENTIAL = 'master-acr-credentials'
         SELENIUM_GRID_HOST = 'selenium-grid' //credentials('selenium-grid-host')
         SELENIUM_GRID_PORT = '4444' //credentials('selenium-grid-port')
     }
@@ -66,19 +66,15 @@ spec:
                 echo '-=- prepare environment -=-'
                 sh 'java -version'
                 sh './mvnw --version'
+                container('podman') {
+                    sh 'podman --version'
+                    sh "podman login $ACR_URL -u $AAD_SERVICE_PRINCIPAL_USR -p $AAD_SERVICE_PRINCIPAL_PSW"
+                }
                 container('aks') {
                     sh "az login --service-principal --username $AAD_SERVICE_PRINCIPAL_USR --password $AAD_SERVICE_PRINCIPAL_PSW --tenant $AKS_TENANT"
                     sh "az aks get-credentials --resource-group $AKS_RESOURCE_GROUP --name $AKS_NAME"
                     sh "kubelogin convert-kubeconfig -l spn --client-id $AAD_SERVICE_PRINCIPAL_USR --client-secret $AAD_SERVICE_PRINCIPAL_PSW"
                     sh 'kubectl version'
-                    script {
-                        ACR_TOKEN = sh(script: "az acr login -n $ACR_NAME --expose-token --output tsv --query accessToken",
-                            returnStdout: true).trim()
-                    }
-                }
-                container('podman') {
-                    sh 'podman --version'
-                    sh "podman login $ACR_URL -u 00000000-0000-0000-0000-000000000000 -p $ACR_TOKEN"
                 }
                 script {
                     qualityGates = readYaml file: 'quality-gates.yaml'
@@ -151,7 +147,7 @@ spec:
             steps {
                 echo '-=- run container image -=-'
                 container('aks') {
-                    sh "kubectl run $TEST_CONTAINER_NAME --image=$ACR_URL/$IMAGE_SNAPSHOT --env=JAVA_OPTS=-javaagent:/jacocoagent.jar=output=tcpserver,address=*,port=$APP_JACOCO_PORT --port=$APP_LISTENING_PORT --overrides='{\"apiVersion\": \"v1\", \"spec\": {\"imagePullSecrets\": [{\"name\": \"master-acr-credentials\"}]}}'"
+                    sh "kubectl run $TEST_CONTAINER_NAME --image=$ACR_URL/$IMAGE_SNAPSHOT --env=JAVA_OPTS=-javaagent:/jacocoagent.jar=output=tcpserver,address=*,port=$APP_JACOCO_PORT --port=$APP_LISTENING_PORT --overrides='{\"apiVersion\": \"v1\", \"spec\": {\"imagePullSecrets\": [{\"name\": \"$ACR_PULL_CREDENTIAL\"}]}}'"
                     sh "kubectl expose pod $TEST_CONTAINER_NAME --port=$APP_LISTENING_PORT"
                     sh "kubectl expose pod $TEST_CONTAINER_NAME --port=$APP_JACOCO_PORT --name=$TEST_CONTAINER_NAME-jacoco"
                 }
