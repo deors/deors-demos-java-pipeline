@@ -74,8 +74,10 @@ spec:
                     sh "az aks get-credentials --resource-group $AKS_RESOURCE_GROUP --name $AKS_NAME"
                     sh 'kubelogin convert-kubeconfig -l spn'
                     sh 'kubectl version'
-                    ACR_TOKEN = sh(script: "az acr login -n $ACR_NAME --expose-token --output tsv --query accessToken",
-                        returnStdout: true).trim()
+                    script {
+                        ACR_TOKEN = sh(script: "az acr login -n $ACR_NAME --expose-token --output tsv --query accessToken",
+                            returnStdout: true).trim()
+                    }
                 }
                 script {
                     qualityGates = readYaml file: 'quality-gates.yaml'
