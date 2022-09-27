@@ -70,7 +70,7 @@ spec:
                     sh 'podman --version'
                 }
                 container('aks') {
-                    sh "az login --service-principal --username $AAD_SERVICE_PRINCIPAL_USR --password $AAD_SERVICE_PRINCIPAL_PWD --tenant $AKS_TENANT"
+                    sh "az login --service-principal --username $AAD_SERVICE_PRINCIPAL_USR --password $AAD_SERVICE_PRINCIPAL_PSW --tenant $AKS_TENANT"
                     sh "az aks get-credentials --resource-group $AKS_RESOURCE_GROUP --name $AKS_NAME"
                     sh 'kubelogin convert-kubeconfig -l spn'
                     sh 'kubectl version'
