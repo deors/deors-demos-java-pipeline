@@ -232,7 +232,6 @@ spec:
         stage('Promote container image') {
             steps {
                 echo '-=- promote container image -=-'
-                ACR_TOKEN = 'undefined'
                 container('aks') {
                     withCredentials([
                             usernamePassword(
