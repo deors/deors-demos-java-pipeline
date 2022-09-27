@@ -151,7 +151,7 @@ spec:
                         }
                     }
                     container('podman') {
-                        withCredentials(string(credentialsId: 'acr-name', variable: 'ACR_NAME')) {
+                        withCredentials([string(credentialsId: 'acr-name', variable: 'ACR_NAME')]) {
                             sh "podman login ${ACR_NAME}.azurecr.io -u 00000000-0000-0000-0000-000000000000 -p ${ACR_TOKEN}"
                             sh "podman push ${ACR_NAME}.azurecr.io/${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION}-SNAPSHOT"
                         }
@@ -250,7 +250,7 @@ spec:
                         }
                     }
                     container('podman') {
-                        withCredentials(string(credentialsId: 'acr-name', variable: 'ACR_NAME')) {
+                        withCredentials([string(credentialsId: 'acr-name', variable: 'ACR_NAME')]) {
                             sh "podman login ${ACR_NAME}.azurecr.io -u 00000000-0000-0000-0000-000000000000 -p ${ACR_TOKEN}"
                             // use latest or a non-snapshot tag to deploy to production
                             sh "podman tag ${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION}-SNAPSHOT ${ACR_NAME}.azurecr.io/${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION}"
