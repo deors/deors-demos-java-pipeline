@@ -39,7 +39,7 @@ spec:
 
     environment {
         APP_NAME = 'deors-demos-java-pipeline'
-        APP_VERSION = '1.0-SNAPSHOT'
+        APP_VERSION = '1.0'
         APP_CONTEXT_ROOT = '/'
         APP_LISTENING_PORT = '8080'
         APP_JACOCO_PORT = '6300'
@@ -50,9 +50,10 @@ spec:
     }
 
     stages {
-        stage('Prepare Environment') {
+        stage('Prepare environment') {
             steps {
                 echo '-=- prepare environment -=-'
+                sh 'java -version'
                 sh './mvnw --version'
                 container('podman') {
                     sh 'podman --version'
@@ -128,11 +129,31 @@ spec:
             }
         }
 
-        stage('Build container image') {
+        stage('Build & push container image') {
             steps {
-                echo '-=- build container image -=-'
+                echo '-=- build & push container image -=-'
                 container('podman') {
-                    sh "podman build -t ${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION} ."
+                    sh "podman build -t ${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION}-SNAPSHOT ."
+                }
+                ACR_TOKEN = 'undefined'
+                container('aks') {
+                    withCredentials([
+                            usernamePassword(
+                                credentialsId: 'sp-terraform-credentials',
+                                usernameVariable: 'AAD_SERVICE_PRINCIPAL_CLIENT_ID',
+                                passwordVariable: 'AAD_SERVICE_PRINCIPAL_CLIENT_SECRET'),
+                            string(credentialsId: 'aks-tenant', variable: 'AKS_TENANT'),
+                            string(credentialsId: 'acr-name', variable: 'ACR_NAME')]) {
+                        sh "az login --service-principal --username ${AAD_SERVICE_PRINCIPAL_CLIENT_ID} --password ${AAD_SERVICE_PRINCIPAL_CLIENT_SECRET} --tenant ${AKS_TENANT}"
+                        ACR_TOKEN = sh(script: "az acr login -n ${ACR_NAME} --expose-token --output tsv --query accessToken",
+                            returnStdout: true).trim()
+                    }
+                }
+                container('podman') {
+                    withCredentials(string(credentialsId: 'acr-name', variable: 'ACR_NAME')) {
+                        sh "podman login ${ACR_NAME}.azurecr.io -u 00000000-0000-0000-0000-000000000000 -p ${ACR_TOKEN}"
+                        sh "podman push ${ACR_NAME}.azurecr.io/${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION}-SNAPSHOT"
+                    }
                 }
             }
         }
@@ -146,7 +167,7 @@ spec:
                                 credentialsId: 'sp-terraform-credentials',
                                 usernameVariable: 'AAD_SERVICE_PRINCIPAL_CLIENT_ID',
                                 passwordVariable: 'AAD_SERVICE_PRINCIPAL_CLIENT_SECRET')]) {
-                        sh "kubectl run ${TEST_CONTAINER_NAME} --image=${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION} --env=JAVA_OPTS=-javaagent:/jacocoagent.jar=output=tcpserver,address=*,port=${APP_JACOCO_PORT} --port=${APP_LISTENING_PORT}"
+                        sh "kubectl run ${TEST_CONTAINER_NAME} --image=${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION}-SNAPSHOT --env=JAVA_OPTS=-javaagent:/jacocoagent.jar=output=tcpserver,address=*,port=${APP_JACOCO_PORT} --port=${APP_LISTENING_PORT}"
                         sh "kubectl expose pod ${TEST_CONTAINER_NAME} --port=${APP_LISTENING_PORT}"
                         sh "kubectl expose pod ${TEST_CONTAINER_NAME} --port=${APP_JACOCO_PORT} --name=${TEST_CONTAINER_NAME}-jacoco"
                     }
@@ -208,16 +229,35 @@ spec:
             }
         }*/
 
-        /*stage('Push Docker image') {
+        stage('Promote container image') {
             steps {
-                echo '-=- push Docker image -=-'
-                withDockerRegistry([ credentialsId: "${ORG_NAME}-docker-hub", url: '' ]) {
-                    sh "docker tag ${ORG_NAME}/${APP_NAME}:${APP_VERSION} ${ORG_NAME}/${APP_NAME}:latest"
-                    sh "docker push ${ORG_NAME}/${APP_NAME}:${APP_VERSION}"
-                    sh "docker push ${ORG_NAME}/${APP_NAME}:latest"
+                echo '-=- promote container image -=-'
+                ACR_TOKEN = 'undefined'
+                container('aks') {
+                    withCredentials([
+                            usernamePassword(
+                                credentialsId: 'sp-terraform-credentials',
+                                usernameVariable: 'AAD_SERVICE_PRINCIPAL_CLIENT_ID',
+                                passwordVariable: 'AAD_SERVICE_PRINCIPAL_CLIENT_SECRET'),
+                            string(credentialsId: 'aks-tenant', variable: 'AKS_TENANT'),
+                            string(credentialsId: 'acr-name', variable: 'ACR_NAME')]) {
+                        sh "az login --service-principal --username ${AAD_SERVICE_PRINCIPAL_CLIENT_ID} --password ${AAD_SERVICE_PRINCIPAL_CLIENT_SECRET} --tenant ${AKS_TENANT}"
+                        ACR_TOKEN = sh(script: "az acr login -n ${ACR_NAME} --expose-token --output tsv --query accessToken",
+                            returnStdout: true).trim()
+                    }
+                }
+                container('podman') {
+                    withCredentials(string(credentialsId: 'acr-name', variable: 'ACR_NAME')) {
+                        sh "podman login ${ACR_NAME}.azurecr.io -u 00000000-0000-0000-0000-000000000000 -p ${ACR_TOKEN}"
+                        // use latest or a non-snapshot tag to deploy to production
+                        sh "podman tag ${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION}-SNAPSHOT ${ACR_NAME}.azurecr.io/${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION}"
+                        sh "podman push ${ACR_NAME}.azurecr.io/${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION}"
+                        sh "podman tag ${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION}-SNAPSHOT ${ACR_NAME}.azurecr.io/${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:latest"
+                        sh "podman push ${ACR_NAME}.azurecr.io/${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:latest"
+                    }
                 }
             }
-        }*/
+        }
     }
 
     post {
