@@ -43,10 +43,21 @@ spec:
         APP_CONTEXT_ROOT = '/'
         APP_LISTENING_PORT = '8080'
         APP_JACOCO_PORT = '6300'
-        CONTAINER_IMAGE_PREFIX = 'deors'
-        TEST_CONTAINER_NAME = "ci-${APP_NAME}-${BUILD_NUMBER}"
-        SELENIUM_HUB_HOST = 'selenium-hub'
-        SELENIUM_HUB_PORT = '4444'
+        IMAGE_PREFIX = 'deors'
+        IMAGE_NAME = "$CONTAINER_IMAGE_PREFIX/$APP_NAME"
+        IMAGE_SNAPSHOT = "$IMAGE_NAME:snapshot-$BUILD_NUMBER"
+        TEST_CONTAINER_NAME = "ephtest-$APP_NAME-$BUILD_NUMBER"
+
+        // credentials & external systems
+        AAD_SERVICE_PRINCIPAL = credentials('sp-terraform-credentials')
+        AKS_TENANT = credentials('aks-tenant')
+        AKS_RESOURCE_GROUP = credentials('aks-resource-group')
+        AKS_NAME = credentials('aks-name')
+        ACR_NAME = credentials('acr-name')
+        ACR_URL = "${ACR_NAME}.azurecr.io"
+        ACR_TOKEN = 'undefined'
+        SELENIUM_HUB_HOST = credentials('selenium-hub-host')
+        SELENIUM_HUB_PORT = credentials('selenium-hub-port')
     }
 
     stages {
@@ -59,19 +70,12 @@ spec:
                     sh 'podman --version'
                 }
                 container('aks') {
-                    withCredentials([
-                            usernamePassword(
-                                credentialsId: 'sp-terraform-credentials',
-                                usernameVariable: 'AAD_SERVICE_PRINCIPAL_CLIENT_ID',
-                                passwordVariable: 'AAD_SERVICE_PRINCIPAL_CLIENT_SECRET'),
-                            string(credentialsId: 'aks-tenant', variable: 'AKS_TENANT'),
-                            string(credentialsId: 'aks-resource-group', variable: 'AKS_RESOURCE_GROUP'),
-                            string(credentialsId: 'aks-name', variable: 'AKS_NAME')]) {
-                        sh "az login --service-principal --username ${AAD_SERVICE_PRINCIPAL_CLIENT_ID} --password ${AAD_SERVICE_PRINCIPAL_CLIENT_SECRET} --tenant ${AKS_TENANT}"
-                        sh "az aks get-credentials --resource-group ${AKS_RESOURCE_GROUP} --name ${AKS_NAME}"
-                        sh 'kubelogin convert-kubeconfig -l spn'
-                        sh 'kubectl version'
-                    }
+                    sh "az login --service-principal --username $AAD_SERVICE_PRINCIPAL_USR --password $AAD_SERVICE_PRINCIPAL_PWD --tenant $AKS_TENANT"
+                    sh "az aks get-credentials --resource-group $AKS_RESOURCE_GROUP --name $AKS_NAME"
+                    sh 'kubelogin convert-kubeconfig -l spn'
+                    sh 'kubectl version'
+                    ACR_TOKEN = sh(script: "az acr login -n $ACR_NAME --expose-token --output tsv --query accessToken",
+                        returnStdout: true).trim()
                 }
                 script {
                     qualityGates = readYaml file: 'quality-gates.yaml'
@@ -102,9 +106,9 @@ spec:
             }
         }
 
-        stage('Dependency vulnerability scan') {
+        stage('Software composition analysis') {
             steps {
-                echo '-=- run dependency vulnerability scan -=-'
+                echo '-=- run software composition analysis -=-'
                 sh './mvnw dependency-check:check'
                 dependencyCheckPublisher(
                     failedTotalCritical: qualityGates.security.dependencies.critical.failed,
@@ -133,30 +137,10 @@ spec:
             steps {
                 echo '-=- build & push container image -=-'
                 container('podman') {
-                    sh "podman build -t ${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION}-SNAPSHOT ."
-                }
-                script {
-                    ACR_TOKEN = 'undefined'
-                    container('aks') {
-                        withCredentials([
-                                usernamePassword(
-                                    credentialsId: 'sp-terraform-credentials',
-                                    usernameVariable: 'AAD_SERVICE_PRINCIPAL_CLIENT_ID',
-                                    passwordVariable: 'AAD_SERVICE_PRINCIPAL_CLIENT_SECRET'),
-                                string(credentialsId: 'aks-tenant', variable: 'AKS_TENANT'),
-                                string(credentialsId: 'acr-name', variable: 'ACR_NAME')]) {
-                            sh "az login --service-principal --username ${AAD_SERVICE_PRINCIPAL_CLIENT_ID} --password ${AAD_SERVICE_PRINCIPAL_CLIENT_SECRET} --tenant ${AKS_TENANT}"
-                            ACR_TOKEN = sh(script: "az acr login -n ${ACR_NAME} --expose-token --output tsv --query accessToken",
-                                returnStdout: true).trim()
-                        }
-                    }
-                    container('podman') {
-                        withCredentials([string(credentialsId: 'acr-name', variable: 'ACR_NAME')]) {
-                            sh "podman login ${ACR_NAME}.azurecr.io -u 00000000-0000-0000-0000-000000000000 -p ${ACR_TOKEN}"
-                            sh "podman tag ${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION}-SNAPSHOT ${ACR_NAME}.azurecr.io/${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION}-SNAPSHOT"
-                            sh "podman push ${ACR_NAME}.azurecr.io/${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION}-SNAPSHOT"
-                        }
-                    }
+                    sh "podman build -t $IMAGE_SNAPSHOT ."
+                    sh "podman login $ACR_URL -u 00000000-0000-0000-0000-000000000000 -p $ACR_TOKEN"
+                    sh "podman tag $IMAGE_SNAPSHOT $ACR_URL/$IMAGE_SNAPSHOT"
+                    sh "podman push $ACR_URL/$IMAGE_SNAPSHOT"
                 }
             }
         }
@@ -165,15 +149,9 @@ spec:
             steps {
                 echo '-=- run container image -=-'
                 container('aks') {
-                    withCredentials([
-                            usernamePassword(
-                                credentialsId: 'sp-terraform-credentials',
-                                usernameVariable: 'AAD_SERVICE_PRINCIPAL_CLIENT_ID',
-                                passwordVariable: 'AAD_SERVICE_PRINCIPAL_CLIENT_SECRET')]) {
-                        sh "kubectl run ${TEST_CONTAINER_NAME} --image=${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION}-SNAPSHOT --env=JAVA_OPTS=-javaagent:/jacocoagent.jar=output=tcpserver,address=*,port=${APP_JACOCO_PORT} --port=${APP_LISTENING_PORT}"
-                        sh "kubectl expose pod ${TEST_CONTAINER_NAME} --port=${APP_LISTENING_PORT}"
-                        sh "kubectl expose pod ${TEST_CONTAINER_NAME} --port=${APP_JACOCO_PORT} --name=${TEST_CONTAINER_NAME}-jacoco"
-                    }
+                    sh "kubectl run $TEST_CONTAINER_NAME --image=$IMAGE_SNAPSHOT --env=JAVA_OPTS=-javaagent:/jacocoagent.jar=output=tcpserver,address=*,port=$APP_JACOCO_PORT --port=$APP_LISTENING_PORT"
+                    sh "kubectl expose pod $TEST_CONTAINER_NAME --port=$APP_LISTENING_PORT"
+                    sh "kubectl expose pod $TEST_CONTAINER_NAME --port=$APP_JACOCO_PORT --name=$TEST_CONTAINER_NAME-jacoco"
                 }
             }
         }
@@ -181,9 +159,9 @@ spec:
         stage('Integration tests') {
             steps {
                 echo '-=- execute integration tests -=-'
-                sh "curl --retry 10 --retry-connrefused --connect-timeout 5 --max-time 5 http://${TEST_CONTAINER_NAME}:${APP_LISTENING_PORT}" + "${APP_CONTEXT_ROOT}/actuator/health".replace('//', '/')
-                sh "./mvnw failsafe:integration-test failsafe:verify -DargLine=-Dtest.selenium.hub.url=http://${SELENIUM_HUB_HOST}:${SELENIUM_HUB_PORT}/wd/hub -Dtest.target.server.url=http://${TEST_CONTAINER_NAME}:${APP_LISTENING_PORT}" + "${APP_CONTEXT_ROOT}/".replace('//', '/')
-                sh "java -jar target/dependency/jacococli.jar dump --address ${TEST_CONTAINER_NAME}-jacoco --port ${APP_JACOCO_PORT} --destfile target/jacoco-it.exec"
+                sh "curl --retry 10 --retry-connrefused --connect-timeout 5 --max-time 5 http://$TEST_CONTAINER_NAME:$APP_LISTENING_PORT" + "$APP_CONTEXT_ROOT/actuator/health".replace('//', '/')
+                sh "./mvnw failsafe:integration-test failsafe:verify -DargLine=-Dtest.selenium.hub.url=http://${SELENIUM_HUB_HOST}:${SELENIUM_HUB_PORT}/wd/hub -Dtest.target.server.url=http://$TEST_CONTAINER_NAME:$APP_LISTENING_PORT" + "$APP_CONTEXT_ROOT/".replace('//', '/')
+                sh "java -jar target/dependency/jacococli.jar dump --address $TEST_CONTAINER_NAME-jacoco --port ${APP_JACOCO_PORT} --destfile target/jacoco-it.exec"
                 sh 'mkdir target/site/jacoco-it'
                 sh 'java -jar target/dependency/jacococli.jar report target/jacoco-it.exec --classfiles target/classes --xml target/site/jacoco-it/jacoco.xml'
                 junit 'target/failsafe-reports/*.xml'
@@ -194,8 +172,8 @@ spec:
         stage('Performance tests') {
             steps {
                 echo '-=- execute performance tests -=-'
-                sh "curl --retry 10 --retry-connrefused --connect-timeout 5 --max-time 5 http://${TEST_CONTAINER_NAME}:${APP_LISTENING_PORT}" + "${APP_CONTEXT_ROOT}/actuator/health".replace('//', '/')
-                sh "./mvnw jmeter:configure@configuration jmeter:jmeter jmeter:results -Djmeter.target.host=${TEST_CONTAINER_NAME} -Djmeter.target.port=${APP_LISTENING_PORT} -Djmeter.target.root=${APP_CONTEXT_ROOT}"
+                sh "curl --retry 10 --retry-connrefused --connect-timeout 5 --max-time 5 http://$TEST_CONTAINER_NAME:$APP_LISTENING_PORT" + "$APP_CONTEXT_ROOT/actuator/health".replace('//', '/')
+                sh "./mvnw jmeter:configure@configuration jmeter:jmeter jmeter:results -Djmeter.target.host=$TEST_CONTAINER_NAME -Djmeter.target.port=$APP_LISTENING_PORT -Djmeter.target.root=$APP_CONTEXT_ROOT"
                 perfReport(
                     sourceDataFiles: 'target/jmeter/results/*.csv',
                     errorUnstableThreshold: qualityGates.performance.throughput.error.unstable,
@@ -214,7 +192,7 @@ spec:
         //         sh 'curl -sL https://deb.nodesource.com/setup_10.x | bash -'
         //         sh 'apt-get install -y nodejs google-chrome-stable'
         //         sh 'npm install -g lighthouse@5.6.0'
-        //         sh "lighthouse http://${TEST_CONTAINER_NAME}:${APP_LISTENING_PORT}/${APP_CONTEXT_ROOT}/hello --output=html --output=csv --chrome-flags=\"--headless --no-sandbox\""
+        //         sh "lighthouse http://$TEST_CONTAINER_NAME:$APP_LISTENING_PORT/$APP_CONTEXT_ROOT/hello --output=html --output=csv --chrome-flags=\"--headless --no-sandbox\""
         //         archiveArtifacts artifacts: '*.report.html'
         //         archiveArtifacts artifacts: '*.report.csv'
         //     }
@@ -235,31 +213,12 @@ spec:
         stage('Promote container image') {
             steps {
                 echo '-=- promote container image -=-'
-                script {
-                    ACR_TOKEN = 'undefined'
-                    container('aks') {
-                        withCredentials([
-                                usernamePassword(
-                                    credentialsId: 'sp-terraform-credentials',
-                                    usernameVariable: 'AAD_SERVICE_PRINCIPAL_CLIENT_ID',
-                                    passwordVariable: 'AAD_SERVICE_PRINCIPAL_CLIENT_SECRET'),
-                                string(credentialsId: 'aks-tenant', variable: 'AKS_TENANT'),
-                                string(credentialsId: 'acr-name', variable: 'ACR_NAME')]) {
-                            sh "az login --service-principal --username ${AAD_SERVICE_PRINCIPAL_CLIENT_ID} --password ${AAD_SERVICE_PRINCIPAL_CLIENT_SECRET} --tenant ${AKS_TENANT}"
-                            ACR_TOKEN = sh(script: "az acr login -n ${ACR_NAME} --expose-token --output tsv --query accessToken",
-                                returnStdout: true).trim()
-                        }
-                    }
-                    container('podman') {
-                        withCredentials([string(credentialsId: 'acr-name', variable: 'ACR_NAME')]) {
-                            sh "podman login ${ACR_NAME}.azurecr.io -u 00000000-0000-0000-0000-000000000000 -p ${ACR_TOKEN}"
-                            // use latest or a non-snapshot tag to deploy to production
-                            sh "podman tag ${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION}-SNAPSHOT ${ACR_NAME}.azurecr.io/${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION}"
-                            sh "podman push ${ACR_NAME}.azurecr.io/${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION}"
-                            sh "podman tag ${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION}-SNAPSHOT ${ACR_NAME}.azurecr.io/${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:latest"
-                            sh "podman push ${ACR_NAME}.azurecr.io/${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:latest"
-                        }
-                    }
+                container('podman') {
+                    // use latest or a non-snapshot tag to deploy to production
+                    sh "podman tag $IMAGE_SNAPSHOT $ACR_URL/$IMAGE_NAME:$APP_VERSION"
+                    sh "podman push $ACR_URL/$IMAGE_NAME:$APP_VERSION"
+                    sh "podman tag $IMAGE_SNAPSHOT $ACR_URL/$IMAGE_NAME:latest"
+                    sh "podman push $ACR_URL/$IMAGE_NAME:latest"
                 }
             }
         }
@@ -269,15 +228,9 @@ spec:
         always {
             echo '-=- stop test container and remove deployment -=-'
             container('aks') {
-                withCredentials([
-                        usernamePassword(
-                            credentialsId: 'sp-terraform-credentials',
-                            usernameVariable: 'AAD_SERVICE_PRINCIPAL_CLIENT_ID',
-                            passwordVariable: 'AAD_SERVICE_PRINCIPAL_CLIENT_SECRET')]) {
-                    sh "kubectl delete pod ${TEST_CONTAINER_NAME}"
-                    sh "kubectl delete service ${TEST_CONTAINER_NAME}"
-                    sh "kubectl delete service ${TEST_CONTAINER_NAME}-jacoco"
-                }
+                sh "kubectl delete pod $TEST_CONTAINER_NAME"
+                sh "kubectl delete service $TEST_CONTAINER_NAME"
+                sh "kubectl delete service $TEST_CONTAINER_NAME-jacoco"
             }
         }
     }
