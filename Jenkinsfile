@@ -135,7 +135,6 @@ spec:
                 container('podman') {
                     sh "podman build -t ${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION}-SNAPSHOT ."
                 }
-                ACR_TOKEN = 'undefined'
                 container('aks') {
                     withCredentials([
                             usernamePassword(
