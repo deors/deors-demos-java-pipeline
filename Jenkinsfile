@@ -55,9 +55,9 @@ spec:
         AKS_NAME = credentials('aks-name')
         ACR_NAME = credentials('acr-name')
         ACR_URL = "${ACR_NAME}.azurecr.io"
-        ACR_TOKEN = 'undefined'
-        //SELENIUM_GRID_HOST = credentials('selenium-grid-host')
-        //SELENIUM_GRID_PORT = credentials('selenium-grid-port')
+        ACR_TOKEN = 'undefined' // obtained dynamically in prep env stage
+        SELENIUM_GRID_HOST = 'selenium-grid' //credentials('selenium-grid-host')
+        SELENIUM_GRID_PORT = '4444' //credentials('selenium-grid-port')
     }
 
     stages {
