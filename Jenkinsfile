@@ -56,8 +56,8 @@ spec:
         ACR_NAME = credentials('acr-name')
         ACR_URL = "${ACR_NAME}.azurecr.io"
         ACR_TOKEN = 'undefined'
-        SELENIUM_HUB_HOST = credentials('selenium-hub-host')
-        SELENIUM_HUB_PORT = credentials('selenium-hub-port')
+        //SELENIUM_GRID_HOST = credentials('selenium-grid-host')
+        //SELENIUM_GRID_PORT = credentials('selenium-grid-port')
     }
 
     stages {
@@ -162,8 +162,8 @@ spec:
             steps {
                 echo '-=- execute integration tests -=-'
                 sh "curl --retry 10 --retry-connrefused --connect-timeout 5 --max-time 5 http://$TEST_CONTAINER_NAME:$APP_LISTENING_PORT" + "$APP_CONTEXT_ROOT/actuator/health".replace('//', '/')
-                sh "./mvnw failsafe:integration-test failsafe:verify -DargLine=-Dtest.selenium.hub.url=http://${SELENIUM_HUB_HOST}:${SELENIUM_HUB_PORT}/wd/hub -Dtest.target.server.url=http://$TEST_CONTAINER_NAME:$APP_LISTENING_PORT" + "$APP_CONTEXT_ROOT/".replace('//', '/')
-                sh "java -jar target/dependency/jacococli.jar dump --address $TEST_CONTAINER_NAME-jacoco --port ${APP_JACOCO_PORT} --destfile target/jacoco-it.exec"
+                sh "./mvnw failsafe:integration-test failsafe:verify -DargLine=-Dtest.selenium.hub.url=http://$SELENIUM_GRID_HOST:$SELENIUM_GRID_PORT/wd/hub -Dtest.target.server.url=http://$TEST_CONTAINER_NAME:$APP_LISTENING_PORT" + "$APP_CONTEXT_ROOT/".replace('//', '/')
+                sh "java -jar target/dependency/jacococli.jar dump --address $TEST_CONTAINER_NAME-jacoco --port $APP_JACOCO_PORT --destfile target/jacoco-it.exec"
                 sh 'mkdir target/site/jacoco-it'
                 sh 'java -jar target/dependency/jacococli.jar report target/jacoco-it.exec --classfiles target/classes --xml target/site/jacoco-it/jacoco.xml'
                 junit 'target/failsafe-reports/*.xml'
