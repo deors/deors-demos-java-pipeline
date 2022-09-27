@@ -66,9 +66,6 @@ spec:
                 echo '-=- prepare environment -=-'
                 sh 'java -version'
                 sh './mvnw --version'
-                container('podman') {
-                    sh 'podman --version'
-                }
                 container('aks') {
                     sh "az login --service-principal --username $AAD_SERVICE_PRINCIPAL_USR --password $AAD_SERVICE_PRINCIPAL_PSW --tenant $AKS_TENANT"
                     sh "az aks get-credentials --resource-group $AKS_RESOURCE_GROUP --name $AKS_NAME"
@@ -78,6 +75,10 @@ spec:
                         ACR_TOKEN = sh(script: "az acr login -n $ACR_NAME --expose-token --output tsv --query accessToken",
                             returnStdout: true).trim()
                     }
+                }
+                container('podman') {
+                    sh 'podman --version'
+                    sh "podman login $ACR_URL -u 00000000-0000-0000-0000-000000000000 -p $ACR_TOKEN"
                 }
                 script {
                     qualityGates = readYaml file: 'quality-gates.yaml'
@@ -140,7 +141,6 @@ spec:
                 echo '-=- build & push container image -=-'
                 container('podman') {
                     sh "podman build -t $IMAGE_SNAPSHOT ."
-                    sh "podman login $ACR_URL -u 00000000-0000-0000-0000-000000000000 -p $ACR_TOKEN"
                     sh "podman tag $IMAGE_SNAPSHOT $ACR_URL/$IMAGE_SNAPSHOT"
                     sh "podman push $ACR_URL/$IMAGE_SNAPSHOT"
                 }
