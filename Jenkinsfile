@@ -135,23 +135,26 @@ spec:
                 container('podman') {
                     sh "podman build -t ${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION}-SNAPSHOT ."
                 }
-                container('aks') {
-                    withCredentials([
-                            usernamePassword(
-                                credentialsId: 'sp-terraform-credentials',
-                                usernameVariable: 'AAD_SERVICE_PRINCIPAL_CLIENT_ID',
-                                passwordVariable: 'AAD_SERVICE_PRINCIPAL_CLIENT_SECRET'),
-                            string(credentialsId: 'aks-tenant', variable: 'AKS_TENANT'),
-                            string(credentialsId: 'acr-name', variable: 'ACR_NAME')]) {
-                        sh "az login --service-principal --username ${AAD_SERVICE_PRINCIPAL_CLIENT_ID} --password ${AAD_SERVICE_PRINCIPAL_CLIENT_SECRET} --tenant ${AKS_TENANT}"
-                        ACR_TOKEN = sh(script: "az acr login -n ${ACR_NAME} --expose-token --output tsv --query accessToken",
-                            returnStdout: true).trim()
+                script {
+                    ACR_TOKEN = 'undefined'
+                    container('aks') {
+                        withCredentials([
+                                usernamePassword(
+                                    credentialsId: 'sp-terraform-credentials',
+                                    usernameVariable: 'AAD_SERVICE_PRINCIPAL_CLIENT_ID',
+                                    passwordVariable: 'AAD_SERVICE_PRINCIPAL_CLIENT_SECRET'),
+                                string(credentialsId: 'aks-tenant', variable: 'AKS_TENANT'),
+                                string(credentialsId: 'acr-name', variable: 'ACR_NAME')]) {
+                            sh "az login --service-principal --username ${AAD_SERVICE_PRINCIPAL_CLIENT_ID} --password ${AAD_SERVICE_PRINCIPAL_CLIENT_SECRET} --tenant ${AKS_TENANT}"
+                            ACR_TOKEN = sh(script: "az acr login -n ${ACR_NAME} --expose-token --output tsv --query accessToken",
+                                returnStdout: true).trim()
+                        }
                     }
-                }
-                container('podman') {
-                    withCredentials(string(credentialsId: 'acr-name', variable: 'ACR_NAME')) {
-                        sh "podman login ${ACR_NAME}.azurecr.io -u 00000000-0000-0000-0000-000000000000 -p ${ACR_TOKEN}"
-                        sh "podman push ${ACR_NAME}.azurecr.io/${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION}-SNAPSHOT"
+                    container('podman') {
+                        withCredentials(string(credentialsId: 'acr-name', variable: 'ACR_NAME')) {
+                            sh "podman login ${ACR_NAME}.azurecr.io -u 00000000-0000-0000-0000-000000000000 -p ${ACR_TOKEN}"
+                            sh "podman push ${ACR_NAME}.azurecr.io/${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION}-SNAPSHOT"
+                        }
                     }
                 }
             }
@@ -216,42 +219,45 @@ spec:
         //     }
         // }
 
-        /*stage('Code inspection & quality gate') {
-            steps {
-                echo '-=- run code inspection & check quality gate -=-'
-                withSonarQubeEnv('ci-sonarqube') {
-                    sh './mvnw sonar:sonar'
-                }
-                timeout(time: 10, unit: 'MINUTES') {
-                    waitForQualityGate abortPipeline: true
-                }
-            }
-        }*/
+        // stage('Code inspection & quality gate') {
+        //     steps {
+        //         echo '-=- run code inspection & check quality gate -=-'
+        //         withSonarQubeEnv('ci-sonarqube') {
+        //             sh './mvnw sonar:sonar'
+        //         }
+        //         timeout(time: 10, unit: 'MINUTES') {
+        //             waitForQualityGate abortPipeline: true
+        //         }
+        //     }
+        // }
 
         stage('Promote container image') {
             steps {
                 echo '-=- promote container image -=-'
-                container('aks') {
-                    withCredentials([
-                            usernamePassword(
-                                credentialsId: 'sp-terraform-credentials',
-                                usernameVariable: 'AAD_SERVICE_PRINCIPAL_CLIENT_ID',
-                                passwordVariable: 'AAD_SERVICE_PRINCIPAL_CLIENT_SECRET'),
-                            string(credentialsId: 'aks-tenant', variable: 'AKS_TENANT'),
-                            string(credentialsId: 'acr-name', variable: 'ACR_NAME')]) {
-                        sh "az login --service-principal --username ${AAD_SERVICE_PRINCIPAL_CLIENT_ID} --password ${AAD_SERVICE_PRINCIPAL_CLIENT_SECRET} --tenant ${AKS_TENANT}"
-                        ACR_TOKEN = sh(script: "az acr login -n ${ACR_NAME} --expose-token --output tsv --query accessToken",
-                            returnStdout: true).trim()
+                script {
+                    ACR_TOKEN = 'undefined'
+                    container('aks') {
+                        withCredentials([
+                                usernamePassword(
+                                    credentialsId: 'sp-terraform-credentials',
+                                    usernameVariable: 'AAD_SERVICE_PRINCIPAL_CLIENT_ID',
+                                    passwordVariable: 'AAD_SERVICE_PRINCIPAL_CLIENT_SECRET'),
+                                string(credentialsId: 'aks-tenant', variable: 'AKS_TENANT'),
+                                string(credentialsId: 'acr-name', variable: 'ACR_NAME')]) {
+                            sh "az login --service-principal --username ${AAD_SERVICE_PRINCIPAL_CLIENT_ID} --password ${AAD_SERVICE_PRINCIPAL_CLIENT_SECRET} --tenant ${AKS_TENANT}"
+                            ACR_TOKEN = sh(script: "az acr login -n ${ACR_NAME} --expose-token --output tsv --query accessToken",
+                                returnStdout: true).trim()
+                        }
                     }
-                }
-                container('podman') {
-                    withCredentials(string(credentialsId: 'acr-name', variable: 'ACR_NAME')) {
-                        sh "podman login ${ACR_NAME}.azurecr.io -u 00000000-0000-0000-0000-000000000000 -p ${ACR_TOKEN}"
-                        // use latest or a non-snapshot tag to deploy to production
-                        sh "podman tag ${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION}-SNAPSHOT ${ACR_NAME}.azurecr.io/${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION}"
-                        sh "podman push ${ACR_NAME}.azurecr.io/${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION}"
-                        sh "podman tag ${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION}-SNAPSHOT ${ACR_NAME}.azurecr.io/${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:latest"
-                        sh "podman push ${ACR_NAME}.azurecr.io/${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:latest"
+                    container('podman') {
+                        withCredentials(string(credentialsId: 'acr-name', variable: 'ACR_NAME')) {
+                            sh "podman login ${ACR_NAME}.azurecr.io -u 00000000-0000-0000-0000-000000000000 -p ${ACR_TOKEN}"
+                            // use latest or a non-snapshot tag to deploy to production
+                            sh "podman tag ${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION}-SNAPSHOT ${ACR_NAME}.azurecr.io/${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION}"
+                            sh "podman push ${ACR_NAME}.azurecr.io/${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION}"
+                            sh "podman tag ${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION}-SNAPSHOT ${ACR_NAME}.azurecr.io/${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:latest"
+                            sh "podman push ${ACR_NAME}.azurecr.io/${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:latest"
+                        }
                     }
                 }
             }
