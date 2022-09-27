@@ -153,6 +153,7 @@ spec:
                     container('podman') {
                         withCredentials([string(credentialsId: 'acr-name', variable: 'ACR_NAME')]) {
                             sh "podman login ${ACR_NAME}.azurecr.io -u 00000000-0000-0000-0000-000000000000 -p ${ACR_TOKEN}"
+                            sh "podman tag ${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION}-SNAPSHOT ${ACR_NAME}.azurecr.io/${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION}-SNAPSHOT"
                             sh "podman push ${ACR_NAME}.azurecr.io/${CONTAINER_IMAGE_PREFIX}/${APP_NAME}:${APP_VERSION}-SNAPSHOT"
                         }
                     }
