@@ -37,7 +37,8 @@ spec:
 
     environment {
         APP_NAME = 'deors-demos-java-pipeline' //TO-DO get from POM
-        APP_VERSION = '1.0' //TO-DO get from POM
+        // APP_VERSION = '1.0' //TO-DO get from POM
+        APP_VERSION = getPomVersion()
         APP_CONTEXT_ROOT = '/'
         APP_LISTENING_PORT = '8080'
         APP_JACOCO_PORT = '6300'
@@ -48,7 +49,7 @@ spec:
         TEST_CONTAINER_NAME = "ephtest-$APP_NAME-$BUILD_NUMBER"
 
         // credentials & external systems
-        CONTAINER_REGISTRY_CRED = credentials("${IMAGE_PREFIX}-docker-hub")
+        CONTAINER_REGISTRY_CRED = 'prueba' // credentials("${IMAGE_PREFIX}-docker-hub")
         SELENIUM_GRID_HOST = 'selenium-grid' //credentials('selenium-grid-host')
         SELENIUM_GRID_PORT = '4444' //credentials('selenium-grid-port')
     }
@@ -57,6 +58,7 @@ spec:
         stage('Prepare environment') {
             steps {
                 echo '-=- prepare environment -=-'
+                echo "POM_VERSION: ${APP_VERSION}"
                 sh 'java -version'
                 sh './mvnw --version'
                 container('podman') {
@@ -225,4 +227,9 @@ spec:
     //         }
     //     }
     // }
+}
+
+
+def getPomVersion() {
+    return readMavenPom().version
 }
