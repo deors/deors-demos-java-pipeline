@@ -1,11 +1,12 @@
 # deors-demos-java-pipeline
 
-An exemplar Java + Maven + Spring Boot project with Jenkins pipeline using Maven lifecycle and Docker for packaging and running integration tests
+An exemplar CI/CD pipeline for Java + Maven + Spring Boot powered by Jenkins, Docker and Kubernetes
 
 This exemplar configuration includes:
 
-- Packaging as a Docker image.
 - Pipeline as code with Jenkins.
+- Build agent as a Kubernetes pod, suitable to be run with Rancher Desktop (K3s).
+- Application packaged as a Docker image.
 - Surefire configured to gather test coverage with JaCoCo.
 - Mutation tests with Pitest.
 - Integration tests with Selenium, which can be executed either manually or via Failsafe.
@@ -16,11 +17,9 @@ This exemplar configuration includes:
 
 ## Set up in Jenkins
 
-The continuous integration pipeline requires that a credential with id `deors-docker-hub`
-is configured in Jenkins. The `deors` prefix in the credential id refers to the `deors`
-org namespace which is targeted to push Docker images to Docker Hub.
+The CI/CD pipeline requires that a credential with id `deors-docker-hub` is configured in Jenkins. The `deors` prefix in the credential id refers to the `deors` org namespace which is the target when pushing Docker images to Docker Hub (the container registry used in this case).
 
-If you want to use your own Docker Hub organization, edit the pipeline replacing the `ORG_NAME` variable with the chosen organization name, and configure the credential in Jenkins with id `<YOUR_ORG_NAME-docker-hub>`.
+If you want to use your own Docker Hub organization, edit the pipeline replacing the `ORG_NAME` variable with the chosen organization name, e.g., `YOUR_ORG_NAME`, and configure the credential in Jenkins with id `<YOUR_ORG_NAME-docker-hub>`.
 
 ## Build and test locally
 
@@ -35,9 +34,9 @@ Once up and running, access the following URLs to get status information, a gene
     http://localhost:8080/hello
     http://localhost:8080/hello/John
 
-## Build and test locally with k3s (Rancher Desktop)
+## Build and test locally with Rancher Desktop (K3s)
 
-There are many ways to have a Kubernetes cluster available for development purposes, but possibly one of the simplest and fastest is to install Rancher Desktop in your workstation. With Rancher Desktop comes k3s, a lightweight Kubernetes distribution optimized to be used in a workstation and other resource-limited environments.
+There are many ways to have a Kubernetes cluster available for development purposes, but possibly one of the simplest and fastest is to install Rancher Desktop in your workstation. With Rancher Desktop comes K3s, a lightweight Kubernetes distribution optimized to be used in a workstation and other resource-limited environments.
 
 Once Rancher Desktop is installed and running, we can use `nerdctl` command line tool to build images and `kubectl` to run them.
 
@@ -63,3 +62,10 @@ Meanwhile the port forward is active (finish it pressing Ctrl+C in the terminal 
 Once the local tests have finished, terminate the service with the following command:
 
     kubectl delete pod javapipeline
+
+Rancher Desktop can be configured to use the Docker client instead. In that case, the equivalent `docker` cli commands are:
+
+    docker built -t deors-demos-java-pipeline:1.0-SNAPSHOT .
+    docker run --name deors-demos-java-pipeline --detach --publish 8080:8080 deors-demos-java-pipeline:1.0-SNAPSHOT
+    docker stop deors-demos-java-pipeline
+    docker rm deors-demos-java-pipeline
