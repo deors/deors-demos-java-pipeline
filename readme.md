@@ -65,7 +65,7 @@ Once the local tests have finished, terminate the service with the following com
 
 Rancher Desktop can be configured to use the Docker client instead. In that case, the equivalent `docker` cli commands are:
 
-    docker built -t deors-demos-java-pipeline:1.0-SNAPSHOT .
+    docker build -t deors-demos-java-pipeline:1.0-SNAPSHOT .
     docker run --name deors-demos-java-pipeline --detach --publish 8080:8080 deors-demos-java-pipeline:1.0-SNAPSHOT
     docker stop deors-demos-java-pipeline
     docker rm deors-demos-java-pipeline
