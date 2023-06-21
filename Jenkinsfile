@@ -9,7 +9,7 @@ kind: Pod
 spec:
   containers:
     - name: jdk
-      image: docker.io/eclipse-temurin:18.0.2.1_1-jdk
+      image: docker.io/eclipse-temurin:20.0.1_9-jdk
       command:
         - sleep
       args:
@@ -18,7 +18,7 @@ spec:
         - name: m2-cache
           mountPath: /root/.m2
     - name: podman
-      image: quay.io/containers/podman:v4.2.0
+      image: quay.io/containers/podman:v4.5.1
       command:
         - sleep
       args:
@@ -41,13 +41,14 @@ spec:
         APP_CONTEXT_ROOT = '/'
         APP_LISTENING_PORT = '8080'
         APP_JACOCO_PORT = '6300'
+        CONTAINER_REGISTRY_URL = 'docker.io'
         IMAGE_PREFIX = 'deors'
         IMAGE_NAME = "$IMAGE_PREFIX/$APP_NAME"
         IMAGE_SNAPSHOT = "$IMAGE_NAME:snapshot-$BUILD_NUMBER"
         TEST_CONTAINER_NAME = "ephtest-$APP_NAME-$BUILD_NUMBER"
 
         // credentials & external systems
-        DOCKER_HUB = credentials("${IMAGE_PREFIX}-docker-hub")
+        CONTAINER_REGISTRY_CRED = credentials("${IMAGE_PREFIX}-docker-hub")
         SELENIUM_GRID_HOST = 'selenium-grid' //credentials('selenium-grid-host')
         SELENIUM_GRID_PORT = '4444' //credentials('selenium-grid-port')
     }
@@ -60,7 +61,7 @@ spec:
                 sh './mvnw --version'
                 container('podman') {
                     sh 'podman --version'
-                    // sh "podman login $ACR_URL -u $AAD_SERVICE_PRINCIPAL_USR -p $AAD_SERVICE_PRINCIPAL_PSW"
+                    sh "podman login $CONTAINER_REGISTRY_URL -u $CONTAINER_REGISTRY_CRED_USR -p $CONTAINER_REGISTRY_CRED_PSW"
                 }
                 // container('aks') {
                 //     sh "az login --service-principal --username $AAD_SERVICE_PRINCIPAL_USR --password $AAD_SERVICE_PRINCIPAL_PSW --tenant $AKS_TENANT"
@@ -200,18 +201,18 @@ spec:
         //     }
         // }
 
-        // stage('Promote container image') {
-        //     steps {
-        //         echo '-=- promote container image -=-'
-        //         container('podman') {
-        //             // use latest or a non-snapshot tag to deploy to production
-        //             sh "podman tag $IMAGE_SNAPSHOT $ACR_URL/$IMAGE_NAME:$APP_VERSION"
-        //             sh "podman push $ACR_URL/$IMAGE_NAME:$APP_VERSION"
-        //             sh "podman tag $IMAGE_SNAPSHOT $ACR_URL/$IMAGE_NAME:latest"
-        //             sh "podman push $ACR_URL/$IMAGE_NAME:latest"
-        //         }
-        //     }
-        // }
+        stage('Promote container image') {
+            steps {
+                echo '-=- promote container image -=-'
+                container('podman') {
+                    // use latest or a non-snapshot tag to deploy to production
+                    sh "podman tag $IMAGE_SNAPSHOT $CONTAINER_REGISTRY_URL/$IMAGE_NAME:$APP_VERSION"
+                    sh "podman push $CONTAINER_REGISTRY_URL/$IMAGE_NAME:$APP_VERSION"
+                    sh "podman tag $IMAGE_SNAPSHOT $CONTAINER_REGISTRY_URL/$IMAGE_NAME:latest"
+                    sh "podman push $CONTAINER_REGISTRY_URL/$IMAGE_NAME:latest"
+                }
+            }
+        }
     }
 
     // post {
