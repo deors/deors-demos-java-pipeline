@@ -14,6 +14,9 @@ spec:
         - sleep
       args:
         - infinity
+      volumeMounts:
+        - name: m2-cache
+          mountPath: /root/.m2
     - name: podman
       image: quay.io/containers/podman:v4.2.0
       command:
@@ -23,6 +26,11 @@ spec:
       securityContext:
         runAsUser: 0
         privileged: true
+  volumes:
+    - name: m2-cache
+      hostPath:
+        path: /data/m2-cache
+        type: DirectoryOrCreate
 '''
         }
     }
