@@ -36,8 +36,8 @@ spec:
     }
 
     environment {
-        APP_NAME = 'deors-demos-java-pipeline' //TO-DO get from POM
-        APP_VERSION = '1.0' //TO-DO get from POM
+        APP_NAME = getPomArtifactId()
+        APP_VERSION = getPomVersion()
         APP_CONTEXT_ROOT = '/'
         APP_LISTENING_PORT = '8080'
         APP_JACOCO_PORT = '6300'
@@ -57,6 +57,8 @@ spec:
         stage('Prepare environment') {
             steps {
                 echo '-=- prepare environment -=-'
+                echo "POM_VERSION: ${APP_VERSION}"
+                echo "APP_NAME: ${APP_NAME}"
                 sh 'java -version'
                 sh './mvnw --version'
                 container('podman') {
@@ -225,4 +227,13 @@ spec:
     //         }
     //     }
     // }
+}
+
+
+def getPomVersion() {
+    return readMavenPom().version
+}
+
+def getPomArtifactId() {
+    return readMavenPom().artifactId
 }
