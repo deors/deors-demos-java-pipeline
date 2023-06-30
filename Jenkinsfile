@@ -55,7 +55,8 @@ spec:
         IMAGE_GA = "$IMAGE_NAME:$APP_VERSION" // tag for GA version
         IMAGE_GA_LATEST = "$IMAGE_NAME:latest" // tag for latest GA version
         EPHTEST_CONTAINER_NAME = "ephtest-$APP_NAME-snapshot-$BUILD_NUMBER"
-        EPHTEST_BASE_URL = "http://$EPHTEST_CONTAINER_NAME:$APP_LISTENING_PORT".concat("$APP_CONTEXT_ROOT/actuator/health".replace('//', '/'))
+        EPHTEST_HEALTH_CHECK_URL = "http://$EPHTEST_CONTAINER_NAME:$APP_LISTENING_PORT".concat("$APP_CONTEXT_ROOT/actuator/health".replace('//', '/'))
+        EPHTEST_BASE_URL = "http://$EPHTEST_CONTAINER_NAME:$APP_LISTENING_PORT".concat("$APP_CONTEXT_ROOT/".replace('//', '/'))
 
         // credentials
         KUBERNETES_CLUSTER_CRED_ID = 'k8s-lima-vm-kubeconfig'
@@ -168,7 +169,7 @@ spec:
         stage('Integration tests') {
             steps {
                 echo '-=- execute integration tests -=-'
-                sh "curl --retry 10 --retry-connrefused --connect-timeout 5 --max-time 5 $EPHTEST_BASE_URL"
+                sh "curl --retry 10 --retry-connrefused --connect-timeout 5 --max-time 5 $EPHTEST_HEALTH_CHECK_URL"
                 sh "./mvnw failsafe:integration-test failsafe:verify -DargLine=-Dtest.selenium.hub.url=$SELENIUM_URL -Dtest.target.server.url=$EPHTEST_BASE_URL"
                 sh "java -jar target/dependency/jacococli.jar dump --address $EPHTEST_CONTAINER_NAME-jacoco --port $APP_JACOCO_PORT --destfile target/jacoco-it.exec"
                 sh 'mkdir target/site/jacoco-it'
@@ -181,7 +182,7 @@ spec:
         stage('Performance tests') {
             steps {
                 echo '-=- execute performance tests -=-'
-                sh "curl --retry 10 --retry-connrefused --connect-timeout 5 --max-time 5 $EPHTEST_BASE_URL"
+                sh "curl --retry 10 --retry-connrefused --connect-timeout 5 --max-time 5 $EPHTEST_HEALTH_CHECK_URL"
                 sh "./mvnw jmeter:configure@configuration jmeter:jmeter jmeter:results -Djmeter.target.host=$EPHTEST_CONTAINER_NAME -Djmeter.target.port=$APP_LISTENING_PORT -Djmeter.target.root=$APP_CONTEXT_ROOT"
                 perfReport(
                     sourceDataFiles: 'target/jmeter/results/*.csv',
