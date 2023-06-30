@@ -54,13 +54,16 @@ spec:
         IMAGE_SNAPSHOT_LATEST = "$IMAGE_NAME:latest-snapshot" // tag for latest snapshot version
         IMAGE_GA = "$IMAGE_NAME:$APP_VERSION" // tag for GA version
         IMAGE_GA_LATEST = "$IMAGE_NAME:latest" // tag for latest GA version
-        TEST_CONTAINER_NAME = "ephtest-$APP_NAME-snapshot-$BUILD_NUMBER"
+        EPHTEST_CONTAINER_NAME = "ephtest-$APP_NAME-snapshot-$BUILD_NUMBER"
 
-        // credentials & external systems
+        // credentials
         KUBERNETES_CLUSTER_CRED_ID = 'k8s-lima-vm-kubeconfig'
         CONTAINER_REGISTRY_CRED = credentials("$IMAGE_ORG-docker-hub")
-        SELENIUM_GRID_HOST = 'selenium-grid' //credentials('selenium-grid-host')
-        SELENIUM_GRID_PORT = '4444' //credentials('selenium-grid-port')
+
+        // external systems
+        SELENIUM_GRID_HOST = 'ci-selenium-grid' //credentials('ci-selenium-grid-host')
+        SELENIUM_GRID_PORT = '4444' //credentials('ci-selenium-grid-port')
+        SELENIUM_URL = "http://$SELENIUM_GRID_HOST:$SELENIUM_GRID_PORT/wd/hub"
     }
 
     stages {
@@ -153,39 +156,40 @@ spec:
                 echo '-=- run container image -=-'
                 container('kubectl') {
                     withKubeConfig([credentialsId: "$KUBERNETES_CLUSTER_CRED_ID"]) {
-                        sh "kubectl run $TEST_CONTAINER_NAME --image=$CONTAINER_REGISTRY_URL/$IMAGE_SNAPSHOT --env=JAVA_OPTS=-javaagent:/jacocoagent.jar=output=tcpserver,address=*,port=$APP_JACOCO_PORT --port=$APP_LISTENING_PORT"
-                        sh "kubectl expose pod $TEST_CONTAINER_NAME --port=$APP_LISTENING_PORT"
-                        sh "kubectl expose pod $TEST_CONTAINER_NAME --port=$APP_JACOCO_PORT --name=$TEST_CONTAINER_NAME-jacoco"
+                        sh "kubectl run $EPHTEST_CONTAINER_NAME --image=$CONTAINER_REGISTRY_URL/$IMAGE_SNAPSHOT --env=JAVA_OPTS=-javaagent:/jacocoagent.jar=output=tcpserver,address=*,port=$APP_JACOCO_PORT --port=$APP_LISTENING_PORT"
+                        sh "kubectl expose pod $EPHTEST_CONTAINER_NAME --port=$APP_LISTENING_PORT"
+                        sh "kubectl expose pod $EPHTEST_CONTAINER_NAME --port=$APP_JACOCO_PORT --name=$EPHTEST_CONTAINER_NAME-jacoco"
                     }
                 }
             }
         }
 
-        // stage('Integration tests') {
-        //     steps {
-        //         echo '-=- execute integration tests -=-'
-        //         sh "curl --retry 10 --retry-connrefused --connect-timeout 5 --max-time 5 http://$TEST_CONTAINER_NAME:$APP_LISTENING_PORT" + "$APP_CONTEXT_ROOT/actuator/health".replace('//', '/')
-        //         sh "./mvnw failsafe:integration-test failsafe:verify -DargLine=-Dtest.selenium.hub.url=http://$SELENIUM_GRID_HOST:$SELENIUM_GRID_PORT/wd/hub -Dtest.target.server.url=http://$TEST_CONTAINER_NAME:$APP_LISTENING_PORT" + "$APP_CONTEXT_ROOT/".replace('//', '/')
-        //         sh "java -jar target/dependency/jacococli.jar dump --address $TEST_CONTAINER_NAME-jacoco --port $APP_JACOCO_PORT --destfile target/jacoco-it.exec"
-        //         sh 'mkdir target/site/jacoco-it'
-        //         sh 'java -jar target/dependency/jacococli.jar report target/jacoco-it.exec --classfiles target/classes --xml target/site/jacoco-it/jacoco.xml'
-        //         junit 'target/failsafe-reports/*.xml'
-        //         jacoco execPattern: 'target/jacoco-it.exec'
-        //     }
-        // }
+        stage('Integration tests') {
+            steps {
+                echo '-=- execute integration tests -=-'
+                EPHTEST_BASE_URL = "http://$EPHTEST_CONTAINER_NAME:$APP_LISTENING_PORT" + "$APP_CONTEXT_ROOT/actuator/health".replace('//', '/')
+                sh "curl --retry 10 --retry-connrefused --connect-timeout 5 --max-time 5 $EPHTEST_BASE_URL"
+                sh "./mvnw failsafe:integration-test failsafe:verify -DargLine=-Dtest.selenium.hub.url=$SELENIUM_URL -Dtest.target.server.url=$EPHTEST_BASE_URL"
+                sh "java -jar target/dependency/jacococli.jar dump --address $EPHTEST_CONTAINER_NAME-jacoco --port $APP_JACOCO_PORT --destfile target/jacoco-it.exec"
+                sh 'mkdir target/site/jacoco-it'
+                sh 'java -jar target/dependency/jacococli.jar report target/jacoco-it.exec --classfiles target/classes --xml target/site/jacoco-it/jacoco.xml'
+                junit 'target/failsafe-reports/*.xml'
+                jacoco execPattern: 'target/jacoco-it.exec'
+            }
+        }
 
-        // stage('Performance tests') {
-        //     steps {
-        //         echo '-=- execute performance tests -=-'
-        //         sh "curl --retry 10 --retry-connrefused --connect-timeout 5 --max-time 5 http://$TEST_CONTAINER_NAME:$APP_LISTENING_PORT" + "$APP_CONTEXT_ROOT/actuator/health".replace('//', '/')
-        //         sh "./mvnw jmeter:configure@configuration jmeter:jmeter jmeter:results -Djmeter.target.host=$TEST_CONTAINER_NAME -Djmeter.target.port=$APP_LISTENING_PORT -Djmeter.target.root=$APP_CONTEXT_ROOT"
-        //         perfReport(
-        //             sourceDataFiles: 'target/jmeter/results/*.csv',
-        //             errorUnstableThreshold: qualityGates.performance.throughput.error.unstable,
-        //             errorFailedThreshold: qualityGates.performance.throughput.error.failed,
-        //             errorUnstableResponseTimeThreshold: qualityGates.performance.throughput.response.unstable)
-        //     }
-        // }
+        stage('Performance tests') {
+            steps {
+                echo '-=- execute performance tests -=-'
+                sh "curl --retry 10 --retry-connrefused --connect-timeout 5 --max-time 5 $EPHTEST_BASE_URL"
+                sh "./mvnw jmeter:configure@configuration jmeter:jmeter jmeter:results -Djmeter.target.host=$EPHTEST_CONTAINER_NAME -Djmeter.target.port=$APP_LISTENING_PORT -Djmeter.target.root=$APP_CONTEXT_ROOT"
+                perfReport(
+                    sourceDataFiles: 'target/jmeter/results/*.csv',
+                    errorUnstableThreshold: qualityGates.performance.throughput.error.unstable,
+                    errorFailedThreshold: qualityGates.performance.throughput.error.failed,
+                    errorUnstableResponseTimeThreshold: qualityGates.performance.throughput.response.unstable)
+            }
+        }
 
         // stage('Web page performance analysis') {
         //     steps {
@@ -197,7 +201,7 @@ spec:
         //         sh 'curl -sL https://deb.nodesource.com/setup_10.x | bash -'
         //         sh 'apt-get install -y nodejs google-chrome-stable'
         //         sh 'npm install -g lighthouse@5.6.0'
-        //         sh "lighthouse http://$TEST_CONTAINER_NAME:$APP_LISTENING_PORT/$APP_CONTEXT_ROOT/hello --output=html --output=csv --chrome-flags=\"--headless --no-sandbox\""
+        //         sh "lighthouse http://$EPHTEST_CONTAINER_NAME:$APP_LISTENING_PORT/$APP_CONTEXT_ROOT/hello --output=html --output=csv --chrome-flags=\"--headless --no-sandbox\""
         //         archiveArtifacts artifacts: '*.report.html'
         //         archiveArtifacts artifacts: '*.report.csv'
         //     }
@@ -235,9 +239,9 @@ spec:
             echo '-=- stop test container and remove deployment -=-'
             container('kubectl') {
                 withKubeConfig([credentialsId: "$KUBERNETES_CLUSTER_CRED_ID"]) {
-                    sh "kubectl delete pod $TEST_CONTAINER_NAME"
-                    sh "kubectl delete service $TEST_CONTAINER_NAME"
-                    sh "kubectl delete service $TEST_CONTAINER_NAME-jacoco"
+                    sh "kubectl delete pod $EPHTEST_CONTAINER_NAME"
+                    sh "kubectl delete service $EPHTEST_CONTAINER_NAME"
+                    sh "kubectl delete service $EPHTEST_CONTAINER_NAME-jacoco"
                 }
             }
         }
