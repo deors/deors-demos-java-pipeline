@@ -55,6 +55,7 @@ spec:
         IMAGE_GA = "$IMAGE_NAME:$APP_VERSION" // tag for GA version
         IMAGE_GA_LATEST = "$IMAGE_NAME:latest" // tag for latest GA version
         EPHTEST_CONTAINER_NAME = "ephtest-$APP_NAME-snapshot-$BUILD_NUMBER"
+        EPHTEST_BASE_URL = "http://$EPHTEST_CONTAINER_NAME:$APP_LISTENING_PORT" + "$APP_CONTEXT_ROOT/actuator/health".replace('//', '/')
 
         // credentials
         KUBERNETES_CLUSTER_CRED_ID = 'k8s-lima-vm-kubeconfig'
@@ -167,7 +168,6 @@ spec:
         stage('Integration tests') {
             steps {
                 echo '-=- execute integration tests -=-'
-                EPHTEST_BASE_URL = "http://$EPHTEST_CONTAINER_NAME:$APP_LISTENING_PORT" + "$APP_CONTEXT_ROOT/actuator/health".replace('//', '/')
                 sh "curl --retry 10 --retry-connrefused --connect-timeout 5 --max-time 5 $EPHTEST_BASE_URL"
                 sh "./mvnw failsafe:integration-test failsafe:verify -DargLine=-Dtest.selenium.hub.url=$SELENIUM_URL -Dtest.target.server.url=$EPHTEST_BASE_URL"
                 sh "java -jar target/dependency/jacococli.jar dump --address $EPHTEST_CONTAINER_NAME-jacoco --port $APP_JACOCO_PORT --destfile target/jacoco-it.exec"
