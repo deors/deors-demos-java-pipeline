@@ -55,7 +55,7 @@ spec:
         IMAGE_GA = "$IMAGE_NAME:$APP_VERSION" // tag for GA version
         IMAGE_GA_LATEST = "$IMAGE_NAME:latest" // tag for latest GA version
         EPHTEST_CONTAINER_NAME = "ephtest-$APP_NAME-snapshot-$BUILD_NUMBER"
-        EPHTEST_BASE_URL = "http://$EPHTEST_CONTAINER_NAME:$APP_LISTENING_PORT" + "$APP_CONTEXT_ROOT/actuator/health".replace('//', '/')
+        EPHTEST_BASE_URL = "http://$EPHTEST_CONTAINER_NAME:$APP_LISTENING_PORT".concat("$APP_CONTEXT_ROOT/actuator/health".replace('//', '/'))
 
         // credentials
         KUBERNETES_CLUSTER_CRED_ID = 'k8s-lima-vm-kubeconfig'
