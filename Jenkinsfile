@@ -32,6 +32,14 @@ spec:
       securityContext:
         runAsUser: 0
         privileged: true
+    - name: lhci
+      image: patrickhulce/lhci-client:0.12.0
+      command:
+        - cat
+      tty: true
+      securityContext:
+        runAsUser: 0
+        privileged: true
   volumes:
     - name: m2-cache
       hostPath:
@@ -44,7 +52,7 @@ spec:
     environment {
         APP_NAME = getPomArtifactId()
         APP_VERSION = getPomVersionNoQualifier()
-        APP_CONTEXT_ROOT = '/'
+        APP_CONTEXT_ROOT = '/' // it should be '/' or '<some-context>/'
         APP_LISTENING_PORT = '8080'
         APP_JACOCO_PORT = '6300'
         CONTAINER_REGISTRY_URL = 'docker.io'
@@ -55,17 +63,16 @@ spec:
         IMAGE_GA = "$IMAGE_NAME:$APP_VERSION" // tag for GA version
         IMAGE_GA_LATEST = "$IMAGE_NAME:latest" // tag for latest GA version
         EPHTEST_CONTAINER_NAME = "ephtest-$APP_NAME-snapshot-$BUILD_NUMBER"
-        EPHTEST_HEALTH_CHECK_URL = "http://$EPHTEST_CONTAINER_NAME:$APP_LISTENING_PORT".concat("$APP_CONTEXT_ROOT/actuator/health".replace('//', '/'))
-        EPHTEST_BASE_URL = "http://$EPHTEST_CONTAINER_NAME:$APP_LISTENING_PORT".concat("$APP_CONTEXT_ROOT/".replace('//', '/'))
+        EPHTEST_BASE_URL = "http://$EPHTEST_CONTAINER_NAME:$APP_LISTENING_PORT".concat("/$APP_CONTEXT_ROOT".replace('//', '/'))
 
         // credentials
         KUBERNETES_CLUSTER_CRED_ID = 'k8s-lima-vm-kubeconfig'
-        CONTAINER_REGISTRY_CRED = credentials("$IMAGE_ORG-docker-hub")
+        CONTAINER_REGISTRY_CRED = credentials("docker-hub-$IMAGE_ORG")
+        LIGHTHOUSE_TOKEN = credentials("ci-lighthouse-token-$APP_NAME")
 
         // external systems
-        SELENIUM_GRID_HOST = 'ci-selenium-grid' //credentials('ci-selenium-grid-host')
-        SELENIUM_GRID_PORT = '4444' //credentials('ci-selenium-grid-port')
-        SELENIUM_URL = "http://$SELENIUM_GRID_HOST:$SELENIUM_GRID_PORT/wd/hub"
+        SELENIUM_URL = credentials('ci-selenium-url') // typically ends with '/wd/hub'
+        LIGHTHOUSE_URL = credentials('ci-lighthouse-url')
     }
 
     stages {
@@ -73,6 +80,8 @@ spec:
             steps {
                 echo '-=- prepare environment -=-'
                 echo "APP_NAME: ${APP_NAME}\nAPP_VERSION: ${APP_VERSION}"
+                echo "the name for the epheremeral test container to be created is: $EPHTEST_CONTAINER_NAME"
+                echo "the base URL for the epheremeral test container is: $EPHTEST_BASE_URL"
                 sh 'java -version'
                 sh './mvnw --version'
                 container('podman') {
@@ -83,6 +92,9 @@ spec:
                     withKubeConfig([credentialsId: "$KUBERNETES_CLUSTER_CRED_ID"]) {
                         sh 'kubectl version'
                     }
+                }
+                container('lhci') {
+                    sh 'lhci --version'
                 }
                 script {
                     qualityGates = readYaml file: 'quality-gates.yaml'
@@ -169,7 +181,7 @@ spec:
         stage('Integration tests') {
             steps {
                 echo '-=- execute integration tests -=-'
-                sh "curl --retry 10 --retry-connrefused --connect-timeout 5 --max-time 5 $EPHTEST_HEALTH_CHECK_URL"
+                sh "curl --retry 10 --retry-connrefused --connect-timeout 5 --max-time 5 ${EPHTEST_BASE_URL}actuator/health"
                 sh "./mvnw failsafe:integration-test failsafe:verify -DargLine=-Dtest.selenium.hub.url=$SELENIUM_URL -Dtest.target.server.url=$EPHTEST_BASE_URL"
                 sh "java -jar target/dependency/jacococli.jar dump --address $EPHTEST_CONTAINER_NAME-jacoco --port $APP_JACOCO_PORT --destfile target/jacoco-it.exec"
                 sh 'mkdir target/site/jacoco-it'
@@ -182,7 +194,7 @@ spec:
         stage('Performance tests') {
             steps {
                 echo '-=- execute performance tests -=-'
-                sh "curl --retry 10 --retry-connrefused --connect-timeout 5 --max-time 5 $EPHTEST_HEALTH_CHECK_URL"
+                sh "curl --retry 10 --retry-connrefused --connect-timeout 5 --max-time 5 ${EPHTEST_BASE_URL}actuator/health"
                 sh "./mvnw jmeter:configure@configuration jmeter:jmeter jmeter:results -Djmeter.target.host=$EPHTEST_CONTAINER_NAME -Djmeter.target.port=$APP_LISTENING_PORT -Djmeter.target.root=$APP_CONTEXT_ROOT"
                 perfReport(
                     sourceDataFiles: 'target/jmeter/results/*.csv',
@@ -192,21 +204,20 @@ spec:
             }
         }
 
-        // stage('Web page performance analysis') {
-        //     steps {
-        //         echo '-=- execute web page performance analysis -=-'
-        //         sh 'apt-get update'
-        //         sh 'apt-get install -y gnupg'
-        //         sh 'echo "deb [arch=amd64] http://dl.google.com/linux/chrome/deb/ stable main" | tee -a /etc/apt/sources.list.d/google.list'
-        //         sh 'curl -sL https://dl.google.com/linux/linux_signing_key.pub | apt-key add -'
-        //         sh 'curl -sL https://deb.nodesource.com/setup_10.x | bash -'
-        //         sh 'apt-get install -y nodejs google-chrome-stable'
-        //         sh 'npm install -g lighthouse@5.6.0'
-        //         sh "lighthouse http://$EPHTEST_CONTAINER_NAME:$APP_LISTENING_PORT/$APP_CONTEXT_ROOT/hello --output=html --output=csv --chrome-flags=\"--headless --no-sandbox\""
-        //         archiveArtifacts artifacts: '*.report.html'
-        //         archiveArtifacts artifacts: '*.report.csv'
-        //     }
-        // }
+        stage('Web page performance analysis') {
+            steps {
+                echo '-=- execute web page performance analysis -=-'
+                container('lhci') {
+                    sh """
+                      cd $WORKSPACE
+                      git config --global --add safe.directory $WORKSPACE
+                      export LHCI_BUILD_CONTEXT__CURRENT_BRANCH=$GIT_BRANCH
+                      lhci collect --collect.settings.chromeFlags='--no-sandbox' --url ${EPHTEST_BASE_URL}hello
+                      lhci upload --token $LIGHTHOUSE_TOKEN --serverBaseUrl $LIGHTHOUSE_URL --ignoreDuplicateBuildFailure
+                    """
+                }
+            }
+        }
 
         // stage('Code inspection & quality gate') {
         //     steps {
