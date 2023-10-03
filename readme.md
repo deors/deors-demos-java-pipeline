@@ -1,8 +1,8 @@
 # deors-demos-java-pipeline
 
-An exemplar CI/CD pipeline for Java + Maven + Spring Boot powered by Jenkins, Podman, Docker and Kubernetes
+An exemplar Jenkins CI/CD pipeline for Java + Maven + Spring Boot applications.
 
-The main features for this reference pipeline are:
+The main features for the reference pipeline are:
 
 - Jenkins declarative pipeline.
 - Build agent as a Kubernetes pod, tested to work with Rancher Desktop (K3s).

@@ -11,8 +11,8 @@
     <packaging>jar</packaging>
 
     <name>deors-demos-java-pipeline</name>
-    <description>An exemplar Java + Maven + Spring Boot project with Jenkins pipeline using
-                 Maven lifecycle and Docker for packaging and running integration tests</description>
+    <description>An exemplar CI/CD pipeline for Java + Maven + Spring Boot powered
+                 by Jenkins, Podman, Docker and Kubernetes</description>
 
     <parent>
         <groupId>org.springframework.boot</groupId>
@@ -52,6 +52,7 @@
         <jmeter.target.root>/</jmeter.target.root>
 
         <!-- maven standard plugins-->
+        <compiler.version>3.8.1</compiler.version>
         <surefire.version>2.22.2</surefire.version>
         <failsafe.version>2.22.2</failsafe.version>
         <dependency.version>3.1.1</dependency.version>
