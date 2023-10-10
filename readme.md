@@ -33,7 +33,7 @@ To run the CI/CD pipeline in Jenkins, begin by configuring the Kubernetes cluste
 - The Jenkins URL to establish the connection with the JNLP agents.
 - The `kubeconfig` file stored in the Jenkins credential vault.
 
-Depending on the networking and ingress configuration, this might be tricky. For a typical local setup with Rancher Desktop and K3s, the Kubernetes API will be accessible from the host machine IP (e.g. 192.168.x.x) and the Jenkins agent integration (typically port 50000) will be accessible from the IP/name internal to the cluster (e.g. pod IP or service name).
+Depending on the networking and ingress configuration, this might be tricky. For a typical local setup with Rancher Desktop and K3s, the Kubernetes API will be accessible from the host machine IP or cluster IP, and the Jenkins agent integration (typically port 50000) will be accessible from the IP/name internal to the cluster (e.g. pod IP or service name).
 
 The CI/CD pipeline requires that a credential with id `docker-hub-deors` is configured in Jenkins. The `deors` suffix in the credential id refers to the `deors` org namespace which is the target when pushing container images to Docker Hub (the container registry used in this case).
 
@@ -41,7 +41,7 @@ If you want to use your own Docker Hub organization, edit the pipeline replacing
 
 The CI/CD pipeline also leverages the Jenkins credential vault to configure the URLs needed to access quality tools Selenium and Lighthouse. The credentials that must be configured in Jenkins are `ci-selenium-url` for the Selenium Grid Hub, and `ci-lighthouse-url` for the Lighthouse CI server.
 
-To upload data into Lighthouse CI server, each project must be previously configured by running the `lhci wizard` command, and the generated token must be added as a credential in Jenkins. As a good practice, considering that there might be many projects configured in the same Jenkins master, configure the credential id in the form `ci-lighthouse-token-<YOU_APP_NAME>`, e.g. `ci-lighthouse-token-deors-demos-java-pipeline`. This is just a recommendation, and of course you may choose an entirely different id for the Lighthouse tokens.
+To upload data into Lighthouse CI server, each project must be previously configured by running the `lhci wizard` command, and the generated token must be added as a credential in Jenkins. As a good practice, considering that there might be many projects configured in the same Jenkins master, configure the credential id in the form `ci-lighthouse-token-<YOUR_APP_NAME>`, e.g. `ci-lighthouse-token-deors-demos-java-pipeline`. This is just a recommendation, and of course you may choose an entirely different id for the Lighthouse tokens.
 
 To configure integration with SonarQube, the following settings must be provided:
 
