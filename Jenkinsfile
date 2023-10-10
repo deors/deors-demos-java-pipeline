@@ -204,32 +204,32 @@ spec:
             }
         }
 
-        stage('Web page performance analysis') {
-            steps {
-                echo '-=- execute web page performance analysis -=-'
-                container('lhci') {
-                    sh """
-                      cd $WORKSPACE
-                      git config --global --add safe.directory $WORKSPACE
-                      export LHCI_BUILD_CONTEXT__CURRENT_BRANCH=$GIT_BRANCH
-                      lhci collect --collect.settings.chromeFlags='--no-sandbox' --url ${EPHTEST_BASE_URL}hello
-                      lhci upload --token $LIGHTHOUSE_TOKEN --serverBaseUrl $LIGHTHOUSE_URL --ignoreDuplicateBuildFailure
-                    """
-                }
-            }
-        }
-
-        // stage('Code inspection & quality gate') {
+        // stage('Web page performance analysis') {
         //     steps {
-        //         echo '-=- run code inspection & check quality gate -=-'
-        //         withSonarQubeEnv('ci-sonarqube') {
-        //             sh './mvnw sonar:sonar'
-        //         }
-        //         timeout(time: 10, unit: 'MINUTES') {
-        //             waitForQualityGate abortPipeline: true
+        //         echo '-=- execute web page performance analysis -=-'
+        //         container('lhci') {
+        //             sh """
+        //               cd $WORKSPACE
+        //               git config --global --add safe.directory $WORKSPACE
+        //               export LHCI_BUILD_CONTEXT__CURRENT_BRANCH=$GIT_BRANCH
+        //               lhci collect --collect.settings.chromeFlags='--no-sandbox' --url ${EPHTEST_BASE_URL}hello
+        //               lhci upload --token $LIGHTHOUSE_TOKEN --serverBaseUrl $LIGHTHOUSE_URL --ignoreDuplicateBuildFailure
+        //             """
         //         }
         //     }
         // }
+
+        stage('Code inspection & quality gate') {
+            steps {
+                echo '-=- run code inspection & check quality gate -=-'
+                withSonarQubeEnv('ci-sonarqube') {
+                    sh './mvnw sonar:sonar'
+                }
+                timeout(time: 10, unit: 'MINUTES') {
+                    waitForQualityGate abortPipeline: true
+                }
+            }
+        }
 
         stage('Promote container image') {
             steps {
@@ -259,7 +259,6 @@ spec:
         }
     }
 }
-
 
 def getPomVersion() {
     return readMavenPom().version
