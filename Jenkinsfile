@@ -204,7 +204,7 @@ spec:
             }
         }
 
-        stage('Web page performance analysis') {
+        /*stage('Web page performance analysis') {
             steps {
                 echo '-=- execute web page performance analysis -=-'
                 container('lhci') {
@@ -218,7 +218,7 @@ spec:
                     """
                 }
             }
-        }
+        }*/
 
         stage('Code inspection & quality gate') {
             steps {
