@@ -33,7 +33,7 @@ spec:
         runAsUser: 0
         privileged: true
     - name: lhci
-      image: patrickhulce/lhci-client:0.12.0
+      image: docker.io/patrickhulce/lhci-client:0.12.0
       command:
         - cat
       tty: true
